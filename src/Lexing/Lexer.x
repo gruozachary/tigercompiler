@@ -1,5 +1,5 @@
 {
-module Lexing.Lexer(AlexPosn(..), Token) where
+module Lexing.Lexer(AlexPosn(..), Token, lexString) where
 }
 
 %wrapper "posn"
@@ -103,4 +103,8 @@ data Token
     | Id AlexPosn String
     | StringLiteral AlexPosn String
     | NumberLiteral AlexPosn Int 
+    deriving (Show)
+
+lexString :: String -> [Token]
+lexString = alexScanTokens
 }
