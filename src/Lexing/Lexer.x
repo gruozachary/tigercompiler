@@ -9,6 +9,7 @@ $alpha = [a-zA-Z]
 
 tokens :-
 <0>    $white+ ;
+<0>    array { \pos s -> Array pos}
 <0>    if { \pos s -> If pos}
 <0>    then { \pos s -> Then pos}
 <0>    else { \pos s -> Else pos}
