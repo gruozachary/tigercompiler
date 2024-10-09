@@ -52,7 +52,8 @@ tokens :-
 <0>    "|" { \pos s -> Pipe pos}
 <0>    ":=" { \pos s -> ColonEqual pos}
 <0>    $alpha ($digit | $alpha | "_")* { \pos s -> Id pos s}
--- TODO: Strings and comments
+-- TODO: comments
+<0>    \".*\" { \pos s -> StringLiteral pos (tail $ init $ s) }
 <0>    $digit+ { \pos s -> NumberLiteral pos (read s)}
 {
 data Token
