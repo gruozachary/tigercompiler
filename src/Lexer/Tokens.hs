@@ -45,6 +45,7 @@ data Token
     | Ampersand Int Int
     | Pipe Int Int
     | ColonEqual Int Int
-    -- Non-literal
+    -- Non-keyword
+    | Id Int Int String
     | StringLiteral Int Int String
     | NumberLiteral Int Int Int 
