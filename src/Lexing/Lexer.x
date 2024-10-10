@@ -2,60 +2,63 @@
 module Lexing.Lexer(AlexPosn(..), Token, lexString) where
 }
 
-%wrapper "posn"
+%wrapper "monad"
 
 $digit = 0-9
 $alpha = [a-zA-Z]
 
 tokens :-
 <0>    $white+ ;
-<0>    array { \pos s -> Array pos}
-<0>    if { \pos s -> If pos}
-<0>    then { \pos s -> Then pos}
-<0>    else { \pos s -> Else pos}
-<0>    while { \pos s -> While pos}
-<0>    for { \pos s -> For pos}
-<0>    to { \pos s -> To pos}
-<0>    do { \pos s -> Do pos}
-<0>    let { \pos s -> Let pos}
-<0>    in { \pos s -> In pos}
-<0>    end { \pos s -> End pos}
-<0>    of { \pos s -> Of pos}
-<0>    break { \pos s -> Break pos}
-<0>    nil { \pos s -> Nil pos}
-<0>    function { \pos s -> Function pos}
-<0>    var { \pos s -> Var pos}
-<0>    type { \pos s -> Type pos}
-<0>    import { \pos s -> Import pos}
-<0>    primitive { \pos s -> Primitive pos}
-<0>    "," { \pos s -> Comma pos}
-<0>    ":" { \pos s -> Colon pos}
-<0>    ";" { \pos s -> Semicolon pos}
-<0>    "(" { \pos s -> LeftParen pos}
-<0>    ")" { \pos s -> RightParen pos}
-<0>    "[" { \pos s -> LeftSquare pos}
-<0>    "]" { \pos s -> RightSquare pos}
-<0>    "{" { \pos s -> LeftBrace pos}
-<0>    "}" { \pos s -> RightBrace pos}
-<0>    "." { \pos s -> Period pos}
-<0>    "+" { \pos s -> Plus pos}
-<0>    "-" { \pos s -> Minus pos}
-<0>    "*" { \pos s -> Star pos}
-<0>    "/" { \pos s -> Slash pos}
-<0>    "=" { \pos s -> Equal pos}
-<0>    "<>" { \pos s -> DoubleAngle pos}
-<0>    "<" { \pos s -> LeftAngle pos}
-<0>    ">" { \pos s -> RightAngle pos}
-<0>    "<=" { \pos s -> LeftAngleEqual pos}
-<0>    ">=" { \pos s -> RightAngleEqual pos}
-<0>    "&" { \pos s -> Ampersand pos}
-<0>    "|" { \pos s -> Pipe pos}
-<0>    ":=" { \pos s -> ColonEqual pos}
-<0>    $alpha ($digit | $alpha | "_")* { \pos s -> Id pos s}
--- TODO: comments
-<0>    \".*\" { \pos s -> StringLiteral pos (tail $ init $ s) }
-<0>    $digit+ { \pos s -> NumberLiteral pos (read s)}
+<0>    array { \(pos, _, _, _) _ -> return (Array pos) }
+<0>    if { \(pos, _, _, _) _  -> return (If pos) }
+<0>    then { \(pos, _, _, _) _  -> return (Then pos) }
+<0>    else { \(pos, _, _, _) _  -> return (Else pos) }
+<0>    while { \(pos, _, _, _) _  -> return (While pos) }
+<0>    for { \(pos, _, _, _) _  -> return (For pos) }
+<0>    to { \(pos, _, _, _) _  -> return (To pos) }
+<0>    do { \(pos, _, _, _) _  -> return (Do pos) }
+<0>    let { \(pos, _, _, _) _  -> return (Let pos) }
+<0>    in { \(pos, _, _, _) _  -> return (In pos) }
+<0>    end { \(pos, _, _, _) _  -> return (End pos) }
+<0>    of { \(pos, _, _, _) _  -> return (Of pos) }
+<0>    break { \(pos, _, _, _) _  -> return (Break pos) }
+<0>    nil { \(pos, _, _, _) _  -> return (Nil pos) }
+<0>    function { \(pos, _, _, _) _  -> return (Function pos) }
+<0>    var { \(pos, _, _, _) _  -> return (Var pos) }
+<0>    type { \(pos, _, _, _) _  -> return (Type pos) }
+<0>    import { \(pos, _, _, _) _  -> return (Import pos) }
+<0>    primitive { \(pos, _, _, _) _  -> return (Primitive pos) }
+<0>    "," { \(pos, _, _, _) _  -> return (Comma pos) }
+<0>    ":" { \(pos, _, _, _) _  -> return (Colon pos) }
+<0>    ";" { \(pos, _, _, _) _  -> return (Semicolon pos) }
+<0>    "(" { \(pos, _, _, _) _  -> return (LeftParen pos) }
+<0>    ")" { \(pos, _, _, _) _  -> return (RightParen pos) }
+<0>    "[" { \(pos, _, _, _) _  -> return (LeftSquare pos) }
+<0>    "]" { \(pos, _, _, _) _  -> return (RightSquare pos) }
+<0>    "{" { \(pos, _, _, _) _  -> return (LeftBrace pos) }
+<0>    "}" { \(pos, _, _, _) _  -> return (RightBrace pos) }
+<0>    "." { \(pos, _, _, _) _  -> return (Period pos) }
+<0>    "+" { \(pos, _, _, _) _  -> return (Plus pos) }
+<0>    "-" { \(pos, _, _, _) _  -> return (Minus pos) }
+<0>    "*" { \(pos, _, _, _) _  -> return (Star pos) }
+<0>    "/" { \(pos, _, _, _) _  -> return (Slash pos) }
+<0>    "=" { \(pos, _, _, _) _  -> return (Equal pos) }
+<0>    "<>" { \(pos, _, _, _) _  -> return (DoubleAngle pos) }
+<0>    "<" { \(pos, _, _, _) _  -> return (LeftAngle pos) }
+<0>    ">" { \(pos, _, _, _) _  -> return (RightAngle pos) }
+<0>    "<=" { \(pos, _, _, _) _  -> return (LeftAngleEqual pos) }
+<0>    ">=" { \(pos, _, _, _) _  -> return (RightAngleEqual pos) }
+<0>    "&" { \(pos, _, _, _) _  -> return (Ampersand pos) }
+<0>    "|" { \(pos, _, _, _) _  -> return (Pipe pos) }
+<0>    ":=" { \(pos, _, _, _) _  -> return (ColonEqual pos) }
+<0>    $alpha ($digit | $alpha | "_")* { \(pos, _, _, s) l -> (return . Id pos $ take l s) }
+-- -- TODO: comments
+<0>    \".*\" { \(pos, _, _, s) l -> return (StringLiteral pos (tail $ init $ take l s)) }
+<0>    $digit+ { \(pos, _, _, s) l -> return (NumberLiteral pos (read $ take l s)) }
 {
+
+alexEOF = return EOF
+
 data Token
     -- Keywords
     = Array AlexPosn
@@ -105,8 +108,18 @@ data Token
     | Id AlexPosn String
     | StringLiteral AlexPosn String
     | NumberLiteral AlexPosn Int 
+    | EOF
     deriving (Show)
 
-lexString :: String -> [Token]
-lexString = alexScanTokens
+move :: Alex [Token]
+move = do
+    t <- alexMonadScan
+    case t of
+        EOF -> return []
+        _   -> do
+            ts <- move
+            return (t : ts)
+
+lexString :: String -> Either String [Token]
+lexString s = runAlex s move 
 }
