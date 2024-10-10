@@ -9,112 +9,128 @@ $alpha = [a-zA-Z]
 
 tokens :-
 <0>    $white+ ;
-<0>    array { \(pos, _, _, _) _ -> return (Array pos) }
-<0>    if { \(pos, _, _, _) _  -> return (If pos) }
-<0>    then { \(pos, _, _, _) _  -> return (Then pos) }
-<0>    else { \(pos, _, _, _) _  -> return (Else pos) }
-<0>    while { \(pos, _, _, _) _  -> return (While pos) }
-<0>    for { \(pos, _, _, _) _  -> return (For pos) }
-<0>    to { \(pos, _, _, _) _  -> return (To pos) }
-<0>    do { \(pos, _, _, _) _  -> return (Do pos) }
-<0>    let { \(pos, _, _, _) _  -> return (Let pos) }
-<0>    in { \(pos, _, _, _) _  -> return (In pos) }
-<0>    end { \(pos, _, _, _) _  -> return (End pos) }
-<0>    of { \(pos, _, _, _) _  -> return (Of pos) }
-<0>    break { \(pos, _, _, _) _  -> return (Break pos) }
-<0>    nil { \(pos, _, _, _) _  -> return (Nil pos) }
-<0>    function { \(pos, _, _, _) _  -> return (Function pos) }
-<0>    var { \(pos, _, _, _) _  -> return (Var pos) }
-<0>    type { \(pos, _, _, _) _  -> return (Type pos) }
-<0>    import { \(pos, _, _, _) _  -> return (Import pos) }
-<0>    primitive { \(pos, _, _, _) _  -> return (Primitive pos) }
-<0>    "," { \(pos, _, _, _) _  -> return (Comma pos) }
-<0>    ":" { \(pos, _, _, _) _  -> return (Colon pos) }
-<0>    ";" { \(pos, _, _, _) _  -> return (Semicolon pos) }
-<0>    "(" { \(pos, _, _, _) _  -> return (LeftParen pos) }
-<0>    ")" { \(pos, _, _, _) _  -> return (RightParen pos) }
-<0>    "[" { \(pos, _, _, _) _  -> return (LeftSquare pos) }
-<0>    "]" { \(pos, _, _, _) _  -> return (RightSquare pos) }
-<0>    "{" { \(pos, _, _, _) _  -> return (LeftBrace pos) }
-<0>    "}" { \(pos, _, _, _) _  -> return (RightBrace pos) }
-<0>    "." { \(pos, _, _, _) _  -> return (Period pos) }
-<0>    "+" { \(pos, _, _, _) _  -> return (Plus pos) }
-<0>    "-" { \(pos, _, _, _) _  -> return (Minus pos) }
-<0>    "*" { \(pos, _, _, _) _  -> return (Star pos) }
-<0>    "/" { \(pos, _, _, _) _  -> return (Slash pos) }
-<0>    "=" { \(pos, _, _, _) _  -> return (Equal pos) }
-<0>    "<>" { \(pos, _, _, _) _  -> return (DoubleAngle pos) }
-<0>    "<" { \(pos, _, _, _) _  -> return (LeftAngle pos) }
-<0>    ">" { \(pos, _, _, _) _  -> return (RightAngle pos) }
-<0>    "<=" { \(pos, _, _, _) _  -> return (LeftAngleEqual pos) }
-<0>    ">=" { \(pos, _, _, _) _  -> return (RightAngleEqual pos) }
-<0>    "&" { \(pos, _, _, _) _  -> return (Ampersand pos) }
-<0>    "|" { \(pos, _, _, _) _  -> return (Pipe pos) }
-<0>    ":=" { \(pos, _, _, _) _  -> return (ColonEqual pos) }
-<0>    $alpha ($digit | $alpha | "_")* { \(pos, _, _, s) l -> (return . Id pos $ take l s) }
+<0>    array { simpleTok Array }
+<0>    if { simpleTok If }
+<0>    then { simpleTok Then }
+<0>    else { simpleTok Else }
+<0>    while { simpleTok While }
+<0>    for { simpleTok For }
+<0>    to { simpleTok To }
+<0>    do { simpleTok Do }
+<0>    let { simpleTok Let }
+<0>    in { simpleTok In }
+<0>    end { simpleTok End }
+<0>    of { simpleTok Of }
+<0>    break { simpleTok Break }
+<0>    nil { simpleTok Nil }
+<0>    function { simpleTok Function }
+<0>    var { simpleTok Var }
+<0>    type { simpleTok Type }
+<0>    import { simpleTok Import }
+<0>    primitive { simpleTok Primitive }
+<0>    "," { simpleTok Comma }
+<0>    ":" { simpleTok Colon }
+<0>    ";" { simpleTok Semicolon }
+<0>    "(" { simpleTok LeftParen }
+<0>    ")" { simpleTok RightParen }
+<0>    "[" { simpleTok LeftSquare }
+<0>    "]" { simpleTok RightSquare }
+<0>    "{" { simpleTok LeftBrace }
+<0>    "}" { simpleTok RightBrace }
+<0>    "." { simpleTok Period }
+<0>    "+" { simpleTok Plus }
+<0>    "-" { simpleTok Minus }
+<0>    "*" { simpleTok Star }
+<0>    "/" { simpleTok Slash }
+<0>    "=" { simpleTok Equal }
+<0>    "<>" { simpleTok DoubleAngle }
+<0>    "<" { simpleTok LeftAngle }
+<0>    ">" { simpleTok RightAngle }
+<0>    "<=" { simpleTok LeftAngleEqual }
+<0>    ">=" { simpleTok RightAngleEqual }
+<0>    "&" { simpleTok Ampersand }
+<0>    "|" { simpleTok Pipe }
+<0>    ":=" { simpleTok ColonEqual }
+<0>    $alpha ($digit | $alpha | "_")* { idTok }
 -- -- TODO: comments
-<0>    \".*\" { \(pos, _, _, s) l -> return (StringLiteral pos (tail $ init $ take l s)) }
-<0>    $digit+ { \(pos, _, _, s) l -> return (NumberLiteral pos (read $ take l s)) }
+<0>    \".*\" { stringTok }
+<0>    $digit+ { numberTok }
 {
 
-alexEOF = return EOF
+alexEOF = do
+    (pos, _, _, _) <- alexGetInput
+    return $ Token EOF pos
 
-data Token
+data Token = Token TokenData AlexPosn deriving (Show)
+
+data TokenData
     -- Keywords
-    = Array AlexPosn
-    | If AlexPosn
-    | Then AlexPosn
-    | Else AlexPosn
-    | While AlexPosn
-    | For AlexPosn
-    | To AlexPosn
-    | Do AlexPosn
-    | Let AlexPosn
-    | In AlexPosn
-    | End AlexPosn
-    | Of AlexPosn
-    | Break AlexPosn
-    | Nil AlexPosn
-    | Function AlexPosn
-    | Var AlexPosn
-    | Type AlexPosn
-    | Import AlexPosn
-    | Primitive AlexPosn
+    = Array
+    | If
+    | Then
+    | Else
+    | While
+    | For
+    | To
+    | Do
+    | Let
+    | In
+    | End
+    | Of
+    | Break
+    | Nil
+    | Function
+    | Var
+    | Type
+    | Import
+    | Primitive
     -- Symbols
-    | Comma AlexPosn 
-    | Colon AlexPosn
-    | Semicolon AlexPosn
-    | LeftParen AlexPosn
-    | RightParen AlexPosn
-    | LeftSquare AlexPosn
-    | RightSquare AlexPosn
-    | LeftBrace AlexPosn
-    | RightBrace AlexPosn
-    | Period AlexPosn
-    | Plus AlexPosn
-    | Minus AlexPosn
-    | Star AlexPosn
-    | Slash AlexPosn
-    | Equal AlexPosn
-    | DoubleAngle AlexPosn
-    | LeftAngle AlexPosn
-    | RightAngle AlexPosn
-    | LeftAngleEqual AlexPosn
-    | RightAngleEqual AlexPosn
-    | Ampersand AlexPosn
-    | Pipe AlexPosn
-    | ColonEqual AlexPosn
+    | Comma 
+    | Colon
+    | Semicolon
+    | LeftParen
+    | RightParen
+    | LeftSquare
+    | RightSquare
+    | LeftBrace
+    | RightBrace
+    | Period
+    | Plus
+    | Minus
+    | Star
+    | Slash
+    | Equal
+    | DoubleAngle
+    | LeftAngle
+    | RightAngle
+    | LeftAngleEqual
+    | RightAngleEqual
+    | Ampersand
+    | Pipe
+    | ColonEqual
     -- Non-keyword
-    | Id AlexPosn String
-    | StringLiteral AlexPosn String
-    | NumberLiteral AlexPosn Int 
+    | Id String
+    | StringLiteral String
+    | NumberLiteral Int 
     | EOF
     deriving (Show)
 
+simpleTok :: TokenData -> AlexInput -> Int -> Alex Token
+simpleTok t (pos, _, _, _) _ = return (Token t pos)
+
+idTok :: AlexInput -> Int -> Alex Token
+idTok (pos, _, _, s) l = return (Token (Id $ take l s) pos)
+
+stringTok :: AlexInput -> Int -> Alex Token
+stringTok (pos, _, _, s) l = return (Token (StringLiteral $ tail $ take (l - 1) s) pos)
+
+numberTok :: AlexInput -> Int -> Alex Token
+numberTok (pos, _, _, s) l = return (Token (NumberLiteral $ read $ take l s) pos)
+
 move :: Alex [Token]
 move = do
-    t <- alexMonadScan
-    case t of
+    t@(Token d _) <- alexMonadScan
+    case d of
         EOF -> return []
         _   -> do
             ts <- move
