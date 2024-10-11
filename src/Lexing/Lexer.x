@@ -2,7 +2,7 @@
 module Lexing.Lexer(AlexPosn(..), Token, lexString) where
 }
 
-%wrapper "monad"
+%wrapper "monadUserState"
 
 $digit = 0-9
 $alpha = [a-zA-Z]
@@ -117,6 +117,9 @@ alexEOF = do
     return $ Token EOF pos
 
 data Token = Token TokenData AlexPosn deriving (Show)
+
+data AlexUserState = ()
+alexInitUserState = ()
 
 simpleTok :: TokenData -> AlexInput -> Int -> Alex Token
 simpleTok t (pos, _, _, _) _ = return (Token t pos)
