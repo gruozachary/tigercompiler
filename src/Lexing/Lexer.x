@@ -114,33 +114,35 @@ data TokenData
 
 alexEOF = do
     (pos, _, _, _) <- alexGetInput
-    return $ Token EOF pos
+    return $ Just $ Token EOF pos
 
 data Token = Token TokenData AlexPosn deriving (Show)
 
-data AlexUserState = ()
+type AlexUserState = ()
 alexInitUserState = ()
 
-simpleTok :: TokenData -> AlexInput -> Int -> Alex Token
-simpleTok t (pos, _, _, _) _ = return (Token t pos)
+simpleTok :: TokenData -> AlexInput -> Int -> Alex (Maybe Token)
+simpleTok t (pos, _, _, _) _ = return $ Just $ Token t pos
 
-idTok :: AlexInput -> Int -> Alex Token
-idTok (pos, _, _, s) l = return (Token (Id $ take l s) pos)
+idTok :: AlexInput -> Int -> Alex (Maybe Token)
+idTok (pos, _, _, s) l = return $ Just $ Token (Id $ take l s) pos
 
-stringTok :: AlexInput -> Int -> Alex Token
-stringTok (pos, _, _, s) l = return (Token (StringLiteral $ tail $ take (l - 1) s) pos)
+stringTok :: AlexInput -> Int -> Alex (Maybe Token)
+stringTok (pos, _, _, s) l = return $ Just $ Token (StringLiteral $ tail $ take (l - 1) s) pos
 
-numberTok :: AlexInput -> Int -> Alex Token
-numberTok (pos, _, _, s) l = return (Token (NumberLiteral $ read $ take l s) pos)
+numberTok :: AlexInput -> Int -> Alex (Maybe Token)
+numberTok (pos, _, _, s) l = return $ Just $ Token (NumberLiteral $ read $ take l s) pos
 
 move :: Alex [Token]
 move = do
-    t@(Token d _) <- alexMonadScan
-    case d of
-        EOF -> return []
-        _   -> do
-            ts <- move
-            return (t : ts)
+    m <- alexMonadScan
+    case m of
+        Nothing              -> move
+        (Just t@(Token d _)) -> case d of
+            EOF -> return []
+            _   -> do
+                ts <- move
+                return (t : ts)
 
 lexString :: String -> Either String [Token]
 lexString s = runAlex s move 
