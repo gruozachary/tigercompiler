@@ -127,14 +127,17 @@ alexInitUserState = AlexUserState { commentDepth = 0 }
 simpleTok :: TokenData -> AlexInput -> Int -> Alex (Maybe Token)
 simpleTok t (pos, _, _, _) _ = return $ Just $ Token t pos
 
+posStringTok :: (Int -> String -> TokenData) -> AlexInput -> Int -> Alex (Maybe Token)
+posStringTok f (pos, _, _, s) l = return $ Just $ Token (f l s) pos
+
 idTok :: AlexInput -> Int -> Alex (Maybe Token)
-idTok (pos, _, _, s) l = return $ Just $ Token (Id $ take l s) pos
+idTok = posStringTok (\l s -> Id $ take l s)
 
 stringTok :: AlexInput -> Int -> Alex (Maybe Token)
-stringTok (pos, _, _, s) l = return $ Just $ Token (StringLiteral $ tail $ take (l - 1) s) pos
+stringTok = posStringTok (\l s -> StringLiteral $ tail $ take (l - 1) s)
 
 numberTok :: AlexInput -> Int -> Alex (Maybe Token)
-numberTok (pos, _, _, s) l = return $ Just $ Token (NumberLiteral $ read $ take l s) pos
+numberTok = posStringTok (\l s -> NumberLiteral $ read $ take l s)
 
 startComment :: AlexInput -> Int -> Alex (Maybe Token)
 startComment _ _ = do
