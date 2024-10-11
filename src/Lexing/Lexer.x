@@ -59,6 +59,10 @@ tokens :-
 -- -- TODO: comments
 <0>    @str      { stringTok }
 <0>    @num      { numberTok }
+
+<0, comment> "/*"      { startComment }
+<comment>    "*/"      { endComment }
+<comment>    .         ;
 {
 data TokenData
     -- Keywords
@@ -118,8 +122,8 @@ alexEOF = do
 
 data Token = Token TokenData AlexPosn deriving (Show)
 
-type AlexUserState = ()
-alexInitUserState = ()
+data AlexUserState = AlexUserState { commentDepth :: Int }
+alexInitUserState = AlexUserState { commentDepth = 0 }
 
 simpleTok :: TokenData -> AlexInput -> Int -> Alex (Maybe Token)
 simpleTok t (pos, _, _, _) _ = return $ Just $ Token t pos
@@ -133,12 +137,27 @@ stringTok (pos, _, _, s) l = return $ Just $ Token (StringLiteral $ tail $ take 
 numberTok :: AlexInput -> Int -> Alex (Maybe Token)
 numberTok (pos, _, _, s) l = return $ Just $ Token (NumberLiteral $ read $ take l s) pos
 
+startComment :: AlexInput -> Int -> Alex (Maybe Token)
+startComment _ _ = do
+    alexSetStartCode comment
+    s <- alexGetUserState
+    alexSetUserState (s { commentDepth = commentDepth s + 1})
+    return Nothing
+
+endComment :: AlexInput -> Int -> Alex (Maybe Token)
+endComment _ _ = do
+    s <- alexGetUserState
+    alexSetUserState (s { commentDepth = commentDepth s - 1})
+    if commentDepth s < 2
+        then alexSetStartCode 0 >> return Nothing
+        else return Nothing
+
 move :: Alex [Token]
 move = do
     m <- alexMonadScan
     case m of
         Nothing              -> move
-        (Just t@(Token d _)) -> case d of
+        Just t@(Token d _)   -> case d of
             EOF -> return []
             _   -> do
                 ts <- move
