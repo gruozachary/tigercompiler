@@ -5,10 +5,15 @@ module Lexing.Lexer(AlexPosn(..), Token, lexString) where
 %wrapper "monadUserState"
 
 $digit = 0-9
+$oct   = 0-7
+$hex   = [0-9a-fA-F]
 $alpha = [a-zA-Z]
 
-@id  = $alpha ($digit | $alpha | "_")*
-@num = $digit+
+@id   = $alpha ($digit | $alpha | "_")*
+@num  = $digit+
+@ctrl = [abfnrtv\\\"]
+@octs = $oct$oct$oct
+@hexs = $hex$hex
 
 tokens :-
 <0>          $white+   ;
@@ -62,8 +67,15 @@ tokens :-
 <comment>    .         ;
 
 <0>          \"        { begin string }
-<string>     \"        { endString }
+<string,sp>  \"        { endString }
+<string>     \\        { beginBackslash }
 <string>     [^\"]     { stringChar }
+
+<bslash>     @ctrl     { backslashChar }
+<bslash>     @octs     { backslashOct }
+<bslash>     @hexs     { backslashChar }
+
+<sp>         " "       { space }
 {
 data TokenData
     -- Keywords
@@ -173,6 +185,25 @@ stringChar (_, _, _, s) l = do
     u <- alexGetUserState
     alexSetUserState $ u { stringValue = (stringValue u) ++ (take l s)}
     return Nothing
+
+beginBackslash :: AlexInput -> Int -> Alex (Maybe Token)
+beginBackslash  (_, _, _, s) l = do
+    alexSetStartCode bslash
+    u <- alexGetUserState
+    alexSetUserState $ u { stringValue = (stringValue u) ++ (take l s)}
+    return Nothing
+
+backslashChar :: AlexInput -> Int -> Alex (Maybe Token)
+backslashChar i l = alexSetStartCode sp >> stringChar i l
+
+backslashOct :: AlexInput -> Int -> Alex (Maybe Token)
+backslashOct i@(AlexPn _ y x, _, _, s) l = do
+    if (read $ "0o" ++ take l s) < 256
+        then backslashChar i l
+        else alexError $ "lexical error at line " ++ show y ++ ", column " ++ show (x + 2)
+
+space :: AlexInput -> Int -> Alex (Maybe Token)
+space i l = alexSetStartCode string >> stringChar i l 
 
 move :: Alex [Token]
 move = do
