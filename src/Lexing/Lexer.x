@@ -8,7 +8,6 @@ $digit = 0-9
 $alpha = [a-zA-Z]
 
 @id  = $alpha ($digit | $alpha | "_")*
-@str = \".*\"
 @num = $digit+
 
 tokens :-
@@ -56,12 +55,15 @@ tokens :-
 <0>          "|"       { simpleTok Pipe }
 <0>          ":="      { simpleTok ColonEqual }
 <0>          @id       { idTok }
-<0>          @str      { stringTok }
 <0>          @num      { numberTok }
 
 <0, comment> "/*"      { startComment }
 <comment>    "*/"      { endComment }
 <comment>    .         ;
+
+<0>          \"        { begin string }
+<string>     \"        { endString }
+<string>     [^\"]     { stringChar }
 {
 data TokenData
     -- Keywords
@@ -121,8 +123,14 @@ alexEOF = do
 
 data Token = Token TokenData AlexPosn deriving (Show)
 
-data AlexUserState = AlexUserState { commentDepth :: Int }
-alexInitUserState = AlexUserState { commentDepth = 0 }
+data AlexUserState = AlexUserState
+    { commentDepth :: Int 
+    , stringValue  :: String
+    }
+alexInitUserState = AlexUserState 
+    { commentDepth = 0
+    , stringValue  = ""
+    }
 
 simpleTok :: TokenData -> AlexInput -> Int -> Alex (Maybe Token)
 simpleTok t (pos, _, _, _) _ = return $ Just $ Token t pos
@@ -153,6 +161,18 @@ endComment _ _ = do
     if commentDepth s < 2
         then alexSetStartCode 0 >> return Nothing
         else return Nothing
+
+endString :: AlexInput -> Int -> Alex (Maybe Token)
+endString (pos, _, _, _) _ = do
+    s <- alexGetUserState
+    alexSetStartCode 0
+    return $ Just $ Token (StringLiteral $ stringValue s) pos
+
+stringChar :: AlexInput -> Int -> Alex (Maybe Token) 
+stringChar (_, _, _, s) l = do
+    u <- alexGetUserState
+    alexSetUserState $ u { stringValue = (stringValue u) ++ (take l s)}
+    return Nothing
 
 move :: Alex [Token]
 move = do
