@@ -12,7 +12,7 @@ $alpha = [a-zA-Z]
 @id   = $alpha ($digit | $alpha | "_")*
 @num  = $digit+
 @ctrl = [abfnrtv\\\"]
-@octs = $oct$oct$oct
+@octs = 0-30-70-7
 @hexs = $hex$hex
 
 tokens :-
@@ -72,7 +72,7 @@ tokens :-
 <string>     [^\"]     { stringChar }
 
 <bslash>     @ctrl     { backslashChar }
-<bslash>     @octs     { backslashOct }
+<bslash>     @octs     { backslashChar }
 <bslash>     @hexs     { backslashChar }
 
 <sp>         " "       { space }
@@ -195,12 +195,6 @@ beginBackslash  (_, _, _, s) l = do
 
 backslashChar :: AlexInput -> Int -> Alex (Maybe Token)
 backslashChar i l = alexSetStartCode sp >> stringChar i l
-
-backslashOct :: AlexInput -> Int -> Alex (Maybe Token)
-backslashOct i@(AlexPn _ y x, _, _, s) l = do
-    if (read $ "0o" ++ take l s) < 256
-        then backslashChar i l
-        else alexError $ "lexical error at line " ++ show y ++ ", column " ++ show (x + 2)
 
 space :: AlexInput -> Int -> Alex (Maybe Token)
 space i l = alexSetStartCode string >> stringChar i l 
