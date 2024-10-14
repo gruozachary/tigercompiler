@@ -64,7 +64,7 @@ tokens :-
 <comment>    "*/"      { endComment }
 <comment>    .         ;
 
-<0>          \"        { begin string }
+<0>          \"        { beginString }
 <string,sp>  \"        { endString }
 <string>     \\        { beginBackslash }
 <string>     [^\"]     { stringChar }
@@ -178,6 +178,15 @@ endComment _ _ = do
     if commentDepth s < 2
         then alexSetStartCode 0 >> return Nothing
         else return Nothing
+
+-- Puts the lexer in string mode for consuming string literals
+-- Resets the string state value
+beginString :: AlexInput -> Int -> Alex (Maybe Token)
+beginString _ _ = do
+    alexSetStartCode string
+    u <- alexGetUserState
+    alexSetUserState $ u { stringValue = ""}
+    return Nothing
 
 -- Ends the string and creates a string literal token
 endString :: AlexInput -> Int -> Alex (Maybe Token)
