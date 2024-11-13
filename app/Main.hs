@@ -1,6 +1,9 @@
 module Main (main) where
 
-import Lib
+import Lexing.Lexer
 
 main :: IO ()
-main = someFunc
+main = do
+    s <- getLine
+    print $ lexString s
+
