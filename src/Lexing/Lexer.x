@@ -123,7 +123,7 @@ data TokenData
     | StringLiteral String
     | NumberLiteral Int 
     | EOF
-    deriving (Show)
+    deriving (Show, Eq)
 
 -- Alex requires implementation to show what to do when EOF is encountered
 alexEOF = do
@@ -131,7 +131,7 @@ alexEOF = do
     return $ Just $ Token EOF pos
 
 -- A token type to encapsulate postion information and the kind of token
-data Token = Token TokenData AlexPosn deriving (Show)
+data Token = Token TokenData AlexPosn deriving (Show, Eq)
 
 -- Custom state defined for use with the monadUserState wrapper
 data AlexUserState = AlexUserState
