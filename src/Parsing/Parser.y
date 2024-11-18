@@ -71,4 +71,99 @@ lexer = (alexMonadScan >>=)
 }
 
 %%
+program : exp
+        | chunks
 
+exps : exp moreExps
+     | {-empty-}
+moreExps : ';' exp moreExps
+         | {-empty-}
+exp : nil
+    | integer
+    | StringLiteral
+-- array and record creations
+    | typeId '[' exp ']' of exp
+    | typeId '{' '}'
+    | typeId '{' id '=' exp recordSubs '}'
+-- variables, field, elements of an array
+    | lvalue
+-- function call
+    | id '(' ')'
+    | id '(' args ')'
+-- operations
+    | '-' exp
+    | exp op exp
+    | '(' exps ')'
+-- assignment
+    | lvalue ':=' exp
+-- control structures
+    | if exp then exp else exp
+    | if exp then exp
+    | while exp do exp
+    | for id ':=' exp to exp do exp
+    | break
+    | let chunks in expds end
+
+       
+
+args : exp moreArgs
+
+moreArgs : ',' exp moreArgs
+         | {-empty-}
+
+recordSubs : ',' id '=' exp recordSubs
+           | {-empty-}
+
+lvalue : id
+       | lvalue '.' id
+       | lvalue '[' exp ']'
+
+op : '+' 
+   | '-' 
+   | '*' 
+   | '/' 
+   | '=' 
+   | '<>' 
+   | '>' 
+   | '<' 
+   | '>=' 
+   | '<=' 
+   | '&' 
+   | '|'
+
+
+-- chunks of declarations
+chunks : chunk chunks
+       | {-empty-}
+chunk : tydecs
+      | fundecs 
+      | vardec 
+      | import stringLiteral
+
+fundecs : fundec fundecs
+        | {-empty-}
+
+tydecs : tydec tydecs
+       | {-empty-}
+
+vardec : var id ':=' exp
+       | var id ':' typeId ':=' exp
+
+-- type declaration
+tydec : type id '=' ty
+
+-- function declaration
+fundec : function id '(' tyFields ')' '=' exp
+       | function id '(' tyFields ')' ':' typeId '=' exp
+       | primitive id '(' tyFields ')'
+       | primitive id '(' tyFields ')' ':' typeId
+
+-- types
+ty : typeId 
+   | '{' tyFields '}' 
+   | array of typeId
+tyFields : id ':' typeId moreTyFields 
+         | {-empty-}
+moreTyFields : ',' id ':' typeId moreTyFields 
+             | {-empty-}
+typeId : id
