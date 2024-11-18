@@ -24,9 +24,6 @@ dependencies:
 - array
 - hspec
 
-build-tools-depends:
-  alex
-
 ghc-options:
 - -Wall
 - -Wcompat
