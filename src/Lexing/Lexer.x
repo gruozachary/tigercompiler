@@ -1,5 +1,5 @@
 {
-module Lexing.Lexer(AlexPosn(..), Token, lexString) where
+module Lexing.Lexer(AlexPosn(..), TokenData(..), Token(..), lexString) where
 }
 
 %wrapper "monadUserState"
