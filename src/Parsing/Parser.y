@@ -68,6 +68,9 @@ import Lexing.Lexer
     numberLiteral { Token (numberLiteral $$) $$ }
     
 {
+data Op
+    = Plus | Sub | Mult | Div | Eql | Neql | Gtn | Ltn | Geq | Leq | And | Or
+
 parseError :: Token -> Alex a
 parserError _ = do
     ((AlexPosn _ line column), _, _, _) <- alexGetInput
@@ -125,18 +128,18 @@ lvalue : id
        | lvalue '.' id
        | lvalue '[' exp ']'
 
-op : '+' 
-   | '-' 
-   | '*' 
-   | '/' 
-   | '=' 
-   | '<>' 
-   | '>' 
-   | '<' 
-   | '>=' 
-   | '<=' 
-   | '&' 
-   | '|'
+op : '+' { Plus }
+   | '-' { Sub }
+   | '*' { Mult }
+   | '/' { Div }
+   | '=' { Eql }
+   | '<>' { Neql }
+   | '>' { Gtn }
+   | '<' { Ltn }
+   | '>=' { Geq }
+   | '<=' { Leq }
+   | '&' { And }
+   | '|' { Or }
 
 
 -- chunks of declarations
