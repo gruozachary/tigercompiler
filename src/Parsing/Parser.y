@@ -10,6 +10,13 @@ import Lexing.Lexer
 %monad { Alex } { >>= } { return }
 %lexer { lexer } { EOF }
 
+-- precedences
+%left '|'
+%left '&'
+%nonassoc '>=' '<=' '=' '<>' '<' '>'
+%left '+' '-'
+%left '*' '/'
+
 %token
     array { Token Array $$ } 
     if { Token If $$ }
