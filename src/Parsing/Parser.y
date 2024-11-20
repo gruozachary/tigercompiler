@@ -61,7 +61,6 @@ import Lexing.Lexer
     '&' { Ampersand } 
     '|' { Pipe } 
     ':=' { ColonEqual }
-    eof { EOF }
     -- Non-keyword
     id { Id $$ }
     stringLiteral { StringLiteral $$ }
