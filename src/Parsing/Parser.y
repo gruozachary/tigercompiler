@@ -1,5 +1,5 @@
 {
-module Parser where
+module Parsing.Parser where
 
 import Lexing.Lexer
 }
@@ -18,162 +18,165 @@ import Lexing.Lexer
 %left '*' '/'
 
 %token
-    array { Token Array $$ } 
-    if { Token If $$ }
-    then { Token Then $$ } 
-    else { Token Else $$ } 
-    while { Token While $$ } 
-    for { Token For $$ } 
-    to { Token To $$ } 
-    do { Token Do $$ } 
-    let { Token Let $$ } 
-    in { Token In $$ } 
-    end { Token End $$ } 
-    of { Token Of $$ } 
-    break { Token Break $$ } 
-    nil { Token Nil $$ } 
-    function { Token Function $$ } 
-    var { Token Var $$ } 
-    type { Token Type $$ } 
-    import { Token Import $$ } 
-    primitive { Token Primitive $$ } 
+    array { Array } 
+    if { If }
+    then { Then } 
+    else { Else } 
+    while { While } 
+    for { For } 
+    to { To } 
+    do { Do } 
+    let { Let } 
+    in { In } 
+    end { End } 
+    of { Of } 
+    break { Break } 
+    nil { Nil } 
+    function { Function } 
+    var { Var } 
+    type { Type } 
+    imprt { Import } 
+    primitive { Primitive } 
     -- Symbols
-    ',' { Token Comma  $$ } 
-    ':' { Token Colon $$ } 
-    ';' { Token Semicolon $$ } 
-    '(' { Token LeftParen $$ } 
-    ')' { Token RightParen $$ } 
-    '[' { Token LeftSquare $$ } 
-    ']' { Token RightSquare $$ } 
-    '{' { Token LeftBrace $$ } 
-    '}' { Token RightBrace $$ } 
-    '.' { Token Period $$ } 
-    '+' { Token Plus $$ } 
-    '-' { Token Minus $$ } 
-    '*' { Token Star $$ } 
-    '/' { Token Slash $$ } 
-    '=' { Token Equal $$ } 
-    '<>' { Token DoubleAngle $$ } 
-    '<' { Token LeftAngle $$ } 
-    '>' { Token RightAngle $$ } 
-    '<=' { Token LeftAngleEqual $$ } 
-    '>=' { Token RightAngleEqual $$ } 
-    '&' { Token Ampersand $$ } 
-    '|' { Token Pipe $$ } 
-    ':=' { Token ColonEqual $$ }
-    eof { Token EOF $$ }
+    ',' { Comma  } 
+    ':' { Colon } 
+    ';' { Semicolon } 
+    '(' { LeftParen } 
+    ')' { RightParen } 
+    '[' { LeftSquare } 
+    ']' { RightSquare } 
+    '{' { LeftBrace } 
+    '}' { RightBrace } 
+    '.' { Period } 
+    '+' { Plus } 
+    '-' { Minus } 
+    '*' { Star } 
+    '/' { Slash } 
+    '=' { Equal } 
+    '<>' { DoubleAngle } 
+    '<' { LeftAngle } 
+    '>' { RightAngle } 
+    '<=' { LeftAngleEqual } 
+    '>=' { RightAngleEqual } 
+    '&' { Ampersand } 
+    '|' { Pipe } 
+    ':=' { ColonEqual }
+    eof { EOF }
     -- Non-keyword
-    id { Token (Id $$) $$ }
-    stringLiteral { Token (StringLiteral $$) $$ }
-    numberLiteral { Token (numberLiteral $$) $$ }
+    id { Id $$ }
+    stringLiteral { StringLiteral $$ }
+    numberLiteral { NumberLiteral $$ }
     
-{
-data Op
-    = Plus | Sub | Mult | Div | Eql | Neql | Gtn | Ltn | Geq | Leq | And | Or
-
-parseError :: Token -> Alex a
-parserError _ = do
-    ((AlexPosn _ line column), _, _, _) <- alexGetInput
-    alexError ("parse error at line " ++ (show line) ++ ", column " ++ (show column))
-
-lexer :: (Token -> Alex a) -> Alex a
-lexer = (alexMonadScan >>=)
-}
 
 %%
-program : exp
-        | chunks
+program : exp { Noop }
+        | chunks { Noop }
 
-exps : exp moreExps
-     | {-empty-}
-moreExps : ';' exp moreExps
-         | {-empty-}
-exp : nil
-    | integer
-    | StringLiteral
+exps : exp moreExps { Noop }
+     | {-empty-} { Noop }
+moreExps : ';' exp moreExps { Noop }
+         | {-empty-} { Noop }
+exp : nil { Noop }
+    | numberLiteral { Noop }
+    | stringLiteral { Noop }
 -- array and record creations
-    | typeId '[' exp ']' of exp
-    | typeId '{' '}'
-    | typeId '{' id '=' exp recordSubs '}'
+    | typeId '[' exp ']' of exp { Noop }
+    | typeId '{' '}' { Noop }
+    | typeId '{' id '=' exp recordSubs '}' { Noop }
 -- variables, field, elements of an array
-    | lvalue
+    | lvalue { Noop }
 -- function call
-    | id '(' ')'
-    | id '(' args ')'
+    | id '(' ')' { Noop }
+    | id '(' args ')' { Noop }
 -- operations
-    | '-' exp
-    | exp op exp
-    | '(' exps ')'
+    | '-' exp { Noop }
+    | exp op exp { Noop }
+    | '(' exps ')' { Noop }
 -- assignment
-    | lvalue ':=' exp
+    | lvalue ':=' exp { Noop }
 -- control structures
-    | if exp then exp else exp
-    | if exp then exp
-    | while exp do exp
-    | for id ':=' exp to exp do exp
-    | break
-    | let chunks in expds end
+    | if exp then exp else exp { Noop }
+    | if exp then exp { Noop }
+    | while exp do exp { Noop }
+    | for id ':=' exp to exp do exp { Noop }
+    | break { Noop }
+    | let chunks in exps end { Noop }
 
        
 
-args : exp moreArgs
+args : exp moreArgs { Noop }
 
-moreArgs : ',' exp moreArgs
-         | {-empty-}
+moreArgs : ',' exp moreArgs { Noop }
+         | {-empty-} { Noop }
 
-recordSubs : ',' id '=' exp recordSubs
-           | {-empty-}
+recordSubs : ',' id '=' exp recordSubs { Noop }
+           | {-empty-} { Noop }
 
-lvalue : id
-       | lvalue '.' id
-       | lvalue '[' exp ']'
+lvalue : id { Noop }
+       | lvalue '.' id { Noop }
+       | lvalue '[' exp ']' { Noop }
 
-op : '+' { Plus }
-   | '-' { Sub }
-   | '*' { Mult }
-   | '/' { Div }
-   | '=' { Eql }
-   | '<>' { Neql }
-   | '>' { Gtn }
-   | '<' { Ltn }
-   | '>=' { Geq }
-   | '<=' { Leq }
-   | '&' { And }
-   | '|' { Or }
+op : '+' { Noop }
+   | '-' { Noop }
+   | '*' { Noop }
+   | '/' { Noop }
+   | '=' { Noop }
+   | '<>' { Noop }
+   | '>' { Noop }
+   | '<' { Noop }
+   | '>=' { Noop }
+   | '<=' { Noop }
+   | '&' { Noop }
+   | '|' { Noop }
 
 
 -- chunks of declarations
-chunks : chunk chunks
-       | {-empty-}
-chunk : tydecs
-      | fundecs 
-      | vardec 
-      | import stringLiteral
+chunks : chunk chunks { Noop }
+       | {-empty-} { Noop }
+chunk : tydecs { Noop }
+      | fundecs { Noop }
+      | vardec { Noop }
+      | imprt stringLiteral { Noop }
 
-fundecs : fundec fundecs
-        | {-empty-}
+fundecs : fundec fundecs { Noop }
+        | {-empty-} { Noop }
 
-tydecs : tydec tydecs
-       | {-empty-}
+tydecs : tydec tydecs { Noop }
+       | {-empty-} { Noop }
 
-vardec : var id ':=' exp
-       | var id ':' typeId ':=' exp
+vardec : var id ':=' exp { Noop }
+       | var id ':' typeId ':=' exp { Noop }
 
 -- type declaration
-tydec : type id '=' ty
+tydec : type id '=' ty { Noop }
 
 -- function declaration
-fundec : function id '(' tyFields ')' '=' exp
-       | function id '(' tyFields ')' ':' typeId '=' exp
-       | primitive id '(' tyFields ')'
-       | primitive id '(' tyFields ')' ':' typeId
+fundec : function id '(' tyFields ')' '=' exp { Noop }
+       | function id '(' tyFields ')' ':' typeId '=' exp { Noop }
+       | primitive id '(' tyFields ')' { Noop }
+       | primitive id '(' tyFields ')' ':' typeId { Noop }
 
 -- types
-ty : typeId 
-   | '{' tyFields '}' 
-   | array of typeId
-tyFields : id ':' typeId moreTyFields 
-         | {-empty-}
-moreTyFields : ',' id ':' typeId moreTyFields 
-             | {-empty-}
-typeId : id
+ty : typeId  { Noop }
+   | '{' tyFields '}' { Noop } 
+   | array of typeId { Noop }
+tyFields : id ':' typeId moreTyFields { Noop } 
+         | {-empty-} { Noop }
+moreTyFields : ',' id ':' typeId moreTyFields { Noop } 
+             | {-empty-} { Noop }
+typeId : id { Noop }
+
+{
+data Node = Noop
+
+parseError _ = do
+    ((AlexPn _ line column), _, _, _) <- alexGetInput
+    alexError ("parse error at line " ++ (show line) ++ ", column " ++ (show column))
+
+lexer :: (Token -> Alex a) -> Alex a
+lexer f = do
+    m <- alexMonadScan
+    case m of
+        Nothing -> lexer f
+        (Just x) -> f x
+}
