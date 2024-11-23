@@ -2,6 +2,7 @@
 module Parsing.Parser where
 
 import Lexing.Lexer
+import Parsing.AstNode
 }
 
 %name parse
@@ -68,38 +69,47 @@ import Lexing.Lexer
     
 
 %%
-program : exp { Noop }
-        | chunks { Noop }
+program : exp { ProgramNode (ExprProg $1) }
+        | chunks { ProgramNode (ChunkProg $1) }
 
-exps : exp moreExps { Noop }
-     | {-empty-} { Noop }
-moreExps : ';' exp moreExps { Noop }
-         | {-empty-} { Noop }
-exp : nil { Noop }
-    | numberLiteral { Noop }
-    | stringLiteral { Noop }
+exps : exp moreExps { 
+    let ExprNode e = $1 
+        ExprsNodes es = $2
+    in ExprsNode (e:es)  }
+     | {-empty-} { ExprsNode [] }
+moreExps : ';' exp moreExps { 
+    let ExprNode e = $1 
+        ExprsNodes es = $2
+    in ExprsNode (e:es) }
+         | {-empty-} { ExprsNode [] }
+exp : nil { ExprNode NilEx }
+    | numberLiteral { ExprNode (IntEx $1) }
+    | stringLiteral { ExprNode (StrEx $1) }
 -- array and record creations
-    | typeId '[' exp ']' of exp { Noop }
+    | typeId '[' exp ']' of exp { ExprNode (ArrayEx $1 $3 $6) }
     | typeId '{' '}' { Noop }
     | typeId '{' id '=' exp recordSubs '}' { Noop }
 -- variables, field, elements of an array
-    | lvalue { Noop }
+    | lvalue { ExprNode (LValEx) }
 -- function call
     | id '(' ')' { Noop }
     | id '(' args ')' { Noop }
 -- operations
-    | '-' exp { Noop }
-    | exp op exp { Noop }
-    | '(' exps ')' { Noop }
+    | '-' exp { ExprNode (NegEx $2) }
+    | exp op exp { let OpNode uOp = $2 in ExprNode (OpEx $1 uOp $3) }
+    | '(' exps ')' { let ExprsNode es = $2 in ExprNode (Exs es) }
 -- assignment
-    | lvalue ':=' exp { Noop }
+    | lvalue ':=' exp { ExprNode (AssignEx $1 $3) }
 -- control structures
-    | if exp then exp else exp { Noop }
-    | if exp then exp { Noop }
-    | while exp do exp { Noop }
-    | for id ':=' exp to exp do exp { Noop }
-    | break { Noop }
-    | let chunks in exps end { Noop }
+    | if exp then exp else exp { ExprNode (IfEx $2 $4 (Just $6)) }
+    | if exp then exp { ExprNode (IfEx $2 $4 Nothing) }
+    | while exp do exp { ExprNode (WhileEx $2 $4) }
+    | for id ':=' exp to exp do exp { ExprNode (ForEx $2 $4 $6 $8) }
+    | break { ExprNode BreakEx }
+    | let chunks in exps end { 
+        let ChunksNode cs = $2 
+            ExprsNode es = $4 
+        in ExprNode (LetEx cs es) }
 
        
 
@@ -111,31 +121,34 @@ moreArgs : ',' exp moreArgs { Noop }
 recordSubs : ',' id '=' exp recordSubs { Noop }
            | {-empty-} { Noop }
 
-lvalue : id { Noop }
-       | lvalue '.' id { Noop }
-       | lvalue '[' exp ']' { Noop }
+lvalue : id { LValueNode (IdLV $1) }
+       | lvalue '.' id { LValueNode (RecLV $1 $3) }
+       | lvalue '[' exp ']' { LValueNode (ArrLV $1 $3) }
 
-op : '+' { Noop }
-   | '-' { Noop }
-   | '*' { Noop }
-   | '/' { Noop }
-   | '=' { Noop }
-   | '<>' { Noop }
-   | '>' { Noop }
-   | '<' { Noop }
-   | '>=' { Noop }
-   | '<=' { Noop }
-   | '&' { Noop }
-   | '|' { Noop }
+op : '+' { OpNode (AddOp) }
+   | '-' { OpNode (SubOp) }
+   | '*' { OpNode (MultOp) }
+   | '/' { OpNode (DivOp) }
+   | '=' { OpNode (EqOp) }
+   | '<>' { OpNode (NeqOp) }
+   | '>' { OpNode (LtOp) }
+   | '<' { OpNode (GtOp) }
+   | '>=' { OpNode (GeOp) }
+   | '<=' { OpNode (LeOp) }
+   | '&' { OpNode (AndOp) }
+   | '|' { OpNode (OrOp) }
 
 
 -- chunks of declarations
-chunks : chunk chunks { Noop }
-       | {-empty-} { Noop }
+chunks : chunk chunks { 
+    let ChunkNode c = $1
+        ChunksNode cs = $2
+    in ChunksNode (c:cs) }
+       | {-empty-} { ChunksNode [] }
 chunk : tydecs { Noop }
       | fundecs { Noop }
-      | vardec { Noop }
-      | imprt stringLiteral { Noop }
+      | vardec { let VarDeclNode v = $1 in ChunkNode (VarChunk v) }
+      | imprt stringLiteral { ChunkNode (ImportChunk $2) }
 
 fundecs : fundec fundecs { Noop }
         | {-empty-} { Noop }
@@ -143,30 +156,30 @@ fundecs : fundec fundecs { Noop }
 tydecs : tydec tydecs { Noop }
        | {-empty-} { Noop }
 
-vardec : var id ':=' exp { Noop }
-       | var id ':' typeId ':=' exp { Noop }
+vardec : var id ':=' exp { VarDeclNode (VarDecl $2 Nothing $4) }
+       | var id ':' typeId ':=' exp { VarDeclNode (VarDecl $2 (Just $4) $6) }
 
 -- type declaration
-tydec : type id '=' ty { Noop }
+tydec : type id '=' ty { TypeDeclNode (TypeDecl $2 $4) }
 
 -- function declaration
-fundec : function id '(' tyFields ')' '=' exp { Noop }
-       | function id '(' tyFields ')' ':' typeId '=' exp { Noop }
-       | primitive id '(' tyFields ')' { Noop }
-       | primitive id '(' tyFields ')' ':' typeId { Noop }
+fundec : function id '(' tyFields ')' '=' exp { FunDeclNode (Function $2 $4 Nothing $7) }
+       | function id '(' tyFields ')' ':' typeId '=' exp { FunDeclNode (Function $2 $4 (Just $7) $9) }
+       | primitive id '(' tyFields ')' { FunDeclNode (Primitive $2 $4 Nothing) }
+       | primitive id '(' tyFields ')' ':' typeId { FunDeclNode (Primitive $2 $4 (Just $7)) }
 
 -- types
-ty : typeId  { Noop }
-   | '{' tyFields '}' { Noop } 
-   | array of typeId { Noop }
-tyFields : id ':' typeId moreTyFields { Noop } 
-         | {-empty-} { Noop }
-moreTyFields : ',' id ':' typeId moreTyFields { Noop } 
-             | {-empty-} { Noop }
-typeId : id { Noop }
+ty : typeId  { TypeNode (IdTy $1) }
+   | '{' tyFields '}' { TypeNode (RecordTy $2) } 
+   | array of typeId { TypeNode (ArrayTy $3) }
+tyFields : id ':' typeId moreTyFields { let TyFieldsNode (TyFields tyList) = $4 in TyFieldsNode (TyFields (($1, $3) : tyList)) } 
+         | {-empty-} { TyFieldsNode (TyFields []) }
+moreTyFields : ',' id ':' typeId moreTyFields { let TyFieldsNode (TyFields tyList) = $5 in TyFieldsNode (TyFields (($2,$4) : tyList)) } 
+             | {-empty-} { TyFieldsNode (TyFields []) }
+typeId : id { TyIdNode (TyId $1) }
 
 {
-data Node = Noop
+
 
 parseError _ = do
     ((AlexPn _ line column), _, _, _) <- alexGetInput

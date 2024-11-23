@@ -1,4 +1,17 @@
-module Parsing.AstNode () where
+module Parsing.AstNode (
+    Id, 
+    Node(..),
+    Program(..), 
+    Expr(..), 
+    LValue(..), 
+    Op(..), 
+    Chunk(..),
+    FunDecl(..), 
+    TypeDecl(..), 
+    VarDecl(..), 
+    Type(..), 
+    TyFields(..), 
+    TyId(..)) where
 
 type Id = String
 
@@ -64,9 +77,9 @@ data Chunk
 
 data FunDecl
     = Function Id TyFields (Maybe TyId) Expr
-    | Primative Id TyFields (Maybe TyId)
+    | Primitive Id TyFields (Maybe TyId)
 data TypeDecl = TypeDecl Id Type
-data VarDecl = VarDecl Id (Maybe TyId)
+data VarDecl = VarDecl Id (Maybe TyId) Expr
 
 data Type
     = IdTy TyId
