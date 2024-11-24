@@ -69,8 +69,9 @@ import Parsing.Nodes
     
 
 %%
-program : exp { ExprProg $1 }
-        | chunks { ChunkProg $1 }
+program :: { Program }
+    : exp { ExprProg $1 }
+    | chunks { ChunkProg $1 }
 
 exps :: { [Expr] }
     : exp moreExps { $1 : $2 }

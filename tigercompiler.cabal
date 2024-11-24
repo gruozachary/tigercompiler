@@ -26,6 +26,7 @@ source-repository head
 library
   exposed-modules:
       Lexing.Lexer
+      Parsing.Nodes
       Parsing.Parser
   other-modules:
       Paths_tigercompiler
