@@ -72,28 +72,28 @@ import Parsing.AstNode
 program : exp { ProgramNode (ExprProg $1) }
         | chunks { ProgramNode (ChunkProg $1) }
 
-exps : exp moreExps { 
-    let ExprNode e = $1 
-        ExprsNodes es = $2
-    in ExprsNode (e:es)  }
+exps : exp moreExps { let ExprNode e = $1 
+                          ExprsNodes es = $2
+                      in ExprsNode (e:es) }
      | {-empty-} { ExprsNode [] }
-moreExps : ';' exp moreExps { 
-    let ExprNode e = $1 
-        ExprsNodes es = $2
-    in ExprsNode (e:es) }
+moreExps : ';' exp moreExps { let ExprNode e = $1 
+                                  ExprsNodes es = $2
+                              in ExprsNode (e:es) }
          | {-empty-} { ExprsNode [] }
 exp : nil { ExprNode NilEx }
     | numberLiteral { ExprNode (IntEx $1) }
     | stringLiteral { ExprNode (StrEx $1) }
 -- array and record creations
     | typeId '[' exp ']' of exp { ExprNode (ArrayEx $1 $3 $6) }
-    | typeId '{' '}' { Noop }
-    | typeId '{' id '=' exp recordSubs '}' { Noop }
+    | typeId '{' '}' { ExprNode (RecordEx $1 []) }
+    | typeId '{' id '=' exp recordSubs '}' { let RecordAssignsNode rList = $6
+                                             in ExprNode (RecordEx $1 (($3, $5):rList)) }
 -- variables, field, elements of an array
     | lvalue { ExprNode (LValEx) }
 -- function call
-    | id '(' ')' { Noop }
-    | id '(' args ')' { Noop }
+    | id '(' ')' { ExprNode (FunCallEx $1 []) }
+    | id '(' args ')' { let ArgsNode aList = $3
+                        in ExprNode (FunCallE $1 aList) }
 -- operations
     | '-' exp { ExprNode (NegEx $2) }
     | exp op exp { let OpNode uOp = $2 in ExprNode (OpEx $1 uOp $3) }
@@ -113,13 +113,15 @@ exp : nil { ExprNode NilEx }
 
        
 
-args : exp moreArgs { Noop }
+args : exp moreArgs { let ArgsNode argList = $2 in ArgsNode (exp:argList) }
 
-moreArgs : ',' exp moreArgs { Noop }
-         | {-empty-} { Noop }
+moreArgs : ',' exp moreArgs { let ArgsNode argList = $2
+                              in ArgsNode (exp:argList) }
+         | {-empty-} { ArgsNode [] }
 
-recordSubs : ',' id '=' exp recordSubs { Noop }
-           | {-empty-} { Noop }
+recordSubs : ',' id '=' exp recordSubs { let RecordAssignsNode rList = $5
+                                         in RecordAssignsNode (($2, $4):rList) }
+           | {-empty-} { RecordAssignsNode [] }
 
 lvalue : id { LValueNode (IdLV $1) }
        | lvalue '.' id { LValueNode (RecLV $1 $3) }
@@ -145,16 +147,18 @@ chunks : chunk chunks {
         ChunksNode cs = $2
     in ChunksNode (c:cs) }
        | {-empty-} { ChunksNode [] }
-chunk : tydecs { Noop }
-      | fundecs { Noop }
+chunk : tydecs { let TypeDeclsNode tList = $1 in ChunkNode (TypeChunk tList) }
+      | fundecs { let FunDeclsNode fList = $1 in ChunkNode (FunChunk fList) }
       | vardec { let VarDeclNode v = $1 in ChunkNode (VarChunk v) }
       | imprt stringLiteral { ChunkNode (ImportChunk $2) }
 
-fundecs : fundec fundecs { Noop }
-        | {-empty-} { Noop }
+fundecs : fundec fundecs { let FunDeclsNode fList = $2
+                           in FunDeclsNode ($1:fList) }
+        | {-empty-} { FunDeclsNode [] }
 
-tydecs : tydec tydecs { Noop }
-       | {-empty-} { Noop }
+tydecs : tydec tydecs { let TypeDeclsNode fList = $2
+                        in TypeDeclsNode ($1:fList) }
+       | {-empty-} { TypeDeclsNode [] }
 
 vardec : var id ':=' exp { VarDeclNode (VarDecl $2 Nothing $4) }
        | var id ':' typeId ':=' exp { VarDeclNode (VarDecl $2 (Just $4) $6) }

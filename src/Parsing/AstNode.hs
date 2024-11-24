@@ -19,10 +19,14 @@ data Node
     = ProgramNode Program
     | ExprsNode [Expr]
     | ExprNode Expr
+    | ArgsNode [Expr]
+    | RecordAssigns [(Id, Expr)]
     | LValueNode LValue
     | OpNode Op
     | ChunksNode [Chunk]
     | ChunkNode Chunk
+    | FunDeclsNode [FunDecl]
+    | TypeDeclsNode [TypeDecl]
     | VarDeclNode VarDecl
     | TypeDeclNode TypeDecl
     | FunDeclNode FunDecl
