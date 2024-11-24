@@ -1,5 +1,5 @@
 {
-module Parsing.Parser where
+module Parsing.Parser (parse) where
 
 import qualified Lexing.Lexer as L
 import Parsing.Nodes

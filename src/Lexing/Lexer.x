@@ -1,7 +1,7 @@
 {
 module Lexing.Lexer
-    ( AlexPosn(..), Token(..), lexString, Alex
-    , alexMonadScan, alexError, alexGetInput
+    ( AlexPosn(..), Token(..), Alex
+    , alexMonadScan, alexError, alexGetInput, runAlex
     ) where
 }
 
@@ -215,20 +215,4 @@ backslashChar i l = alexSetStartCode sp >> stringChar i l
 -- Consumes a space character
 space :: AlexInput -> Int -> Alex (Maybe Token)
 space i l = alexSetStartCode string >> stringChar i l 
-
--- This function produces a list of tokens from the input, using alexMonadScan
-move :: Alex [Token]
-move = do
-    m <- alexMonadScan
-    case m of
-        Nothing            -> move
-        Just t -> case t of
-            EOF -> return []
-            _   -> do
-                ts <- move
-                return (t : ts)
-
--- Runs the alex monad
-lexString :: String -> Either String [Token]
-lexString s = runAlex s move 
 }
