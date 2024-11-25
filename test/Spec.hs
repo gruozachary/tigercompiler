@@ -1,17 +1,33 @@
 import Test.Hspec (hspec, describe, it, shouldBe)
 import qualified Lexing.Lexer as Lx
 
+-- This function produces a list of tokens from the input, using alexMonadScan
+move :: Lx.Alex [Lx.Token]
+move = do
+    m <- Lx.alexMonadScan
+    case m of
+        Nothing            -> move
+        Just t -> case t of
+            Lx.EOF -> return []
+            _   -> do
+                ts <- move
+                return (t : ts)
+
+-- Runs the alex monad
+lexString :: String -> Either String [Lx.Token]
+lexString s = Lx.runAlex s move 
+
 main :: IO ()
 main = hspec $ do
     describe "lexString" $ do
         it "can lex nested comments" $ do
-            Lx.lexString
+            lexString
                 "/* Comment /* Nested comment */ Comment */"
                 `shouldBe`
                 Right []
         
         it "can lex all keywords" $ do
-            Lx.lexString
+            lexString
                 "array if then else while for to do let in end of break nil \
                 \function var type import primitive"
                 `shouldBe`
@@ -23,19 +39,19 @@ main = hspec $ do
                     ]
         
         it "can lex string escapes" $ do
-            Lx.lexString
+            lexString
                 "\"\\a \\b \\f \\n \\r \\t \\v\""
                 `shouldBe`
                 Right [ Lx.StringLiteral "\\a \\b \\f \\n \\r \\t \\v" ]
         
         it "can lex all string escape nums" $ do
-            Lx.lexString "\"\\ff \\FF \\fF \\123 \\123 \\000 \\377\""
+            lexString "\"\\ff \\FF \\fF \\123 \\123 \\000 \\377\""
             `shouldBe`
             Right
                 [ Lx.StringLiteral "\\ff \\FF \\fF \\123 \\123 \\000 \\377" ]
         
         it "can lex number literals vs identifiers" $ do
-            Lx.lexString "123123 g214343 13323 hello0 hei0"
+            lexString "123123 g214343 13323 hello0 hei0"
             `shouldBe`
             Right 
                 [ Lx.NumberLiteral 123123, Lx.Id "g214343"
