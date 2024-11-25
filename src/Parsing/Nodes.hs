@@ -11,15 +11,18 @@ module Parsing.Nodes
     , Type(..)
     , TyFields(..)
     , TyId(..)
-    , idToTyId ) where
+    , idToTyId, tyIdToId ) where
 
-newtype Id = Id String deriving Show
-newtype TyId = TyId String deriving Show
+newtype Id = Id String deriving (Show, Eq)
+newtype TyId = TyId String deriving (Show, Eq)
 
 idToTyId :: Id -> TyId
 idToTyId (Id x) = TyId x
 
-data Program = ExprProg Expr | ChunkProg [Chunk] deriving Show
+tyIdToId :: TyId -> Id
+tyIdToId (TyId x) = Id x
+
+data Program = ExprProg Expr | ChunkProg [Chunk] deriving (Show, Eq)
 
 data Expr
     = NilEx
@@ -38,13 +41,13 @@ data Expr
     | ForEx Id Expr Expr Expr
     | BreakEx
     | LetEx [Chunk] [Expr]
-    deriving Show
+    deriving (Show, Eq)
 
 data LValue
     = IdLV Id
     | RecLV LValue Id
     | ArrLV LValue Expr
-    deriving Show
+    deriving (Show, Eq)
 
 data Op
     = AddOp
@@ -59,26 +62,26 @@ data Op
     | GeOp
     | AndOp
     | OrOp
-    deriving Show
+    deriving (Show, Eq)
 
 data Chunk
     = TypeChunk [TypeDecl]
     | FunChunk [FunDecl]
     | VarChunk VarDecl
     | ImportChunk String
-    deriving Show
+    deriving (Show, Eq)
 
 data FunDecl
     = Function Id TyFields (Maybe TyId) Expr
     | Primitive Id TyFields (Maybe TyId)
-    deriving Show
-data TypeDecl = TypeDecl Id Type deriving Show
-data VarDecl = VarDecl Id (Maybe TyId) Expr deriving Show
+    deriving (Show, Eq)
+data TypeDecl = TypeDecl Id Type deriving (Show, Eq)
+data VarDecl = VarDecl Id (Maybe TyId) Expr deriving (Show, Eq)
 
 data Type
     = IdTy TyId
     | RecordTy TyFields
     | ArrayTy TyId
-    deriving Show
+    deriving (Show, Eq)
 
-newtype TyFields = TyFields [(Id, TyId)] deriving Show
+newtype TyFields = TyFields [(Id, TyId)] deriving (Show, Eq)

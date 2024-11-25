@@ -17,6 +17,7 @@ import Parsing.Nodes
 %nonassoc '>=' '<=' '=' '<>' '<' '>'
 %left '+' '-'
 %left '*' '/'
+%left NEG
 
 %token
     array { L.Array } 
@@ -84,7 +85,7 @@ exp :: { Expr }
     | numberLiteral { IntEx $1 }
     | stringLiteral { StrEx $1 }
 -- array and record creations
-    | typeId '[' exp ']' of exp { ArrayEx $1 $3 $6 }
+    | typeId '[' exp ']' of exp %shift { ArrayEx $1 $3 $6 }
     | typeId '{' '}' { RecordEx $1 [] }
     | typeId '{' id '=' exp recordSubs '}' { RecordEx $1 (($3, $5) : $6) }
 -- variables, field, elements of an array
@@ -93,16 +94,16 @@ exp :: { Expr }
     | id '(' ')' { FunCallEx $1 [] }
     | id '(' args ')' { FunCallEx $1 $3 }
 -- operations
-    | '-' exp { NegEx $2 }
-    | exp op exp { OpEx $1 $2 $3 }
+    | '-' exp %prec NEG { NegEx $2 }
+    | exp op exp %shift { OpEx $1 $2 $3 }
     | '(' exps ')' { Exs $2 }
 -- assignment
-    | lvalue ':=' exp { AssignEx $1 $3 }
+    | lvalue ':=' exp %shift { AssignEx $1 $3 }
 -- control structures
-    | if exp then exp else exp { IfEx $2 $4 (Just $6) }
-    | if exp then exp { IfEx $2 $4 Nothing }
-    | while exp do exp { WhileEx $2 $4 }
-    | for id ':=' exp to exp do exp { ForEx $2 $4 $6 $8 }
+    | if exp then exp else exp %shift { IfEx $2 $4 (Just $6) }
+    | if exp then exp %shift { IfEx $2 $4 Nothing }
+    | while exp do exp %shift { WhileEx $2 $4 }
+    | for id ':=' exp to exp do exp %shift { ForEx $2 $4 $6 $8 }
     | break { BreakEx }
     | let chunks in exps end { LetEx $2 $4 }
 
@@ -119,7 +120,7 @@ recordSubs :: { [(Id, Expr)] }
 
 -- LHS values
 lvalue :: { LValue }
-    : id { IdLV $1 }
+    : typeId %shift { IdLV (tyIdToId $1) }
     | lvalue '.' id { RecLV $1 $3 }
     | lvalue '[' exp ']' { ArrLV $1 $3 }
 
@@ -151,11 +152,11 @@ chunk :: { Chunk }
 
 fundecs :: { [FunDecl] }
     : fundec fundecs { $1 : $2 }
-    | {-empty-} { [] }
+    | {-empty-} %shift { [] }
 
 tydecs :: { [TypeDecl] }
     : tydec tydecs { $1 : $2 }
-    | {-empty-} { [] }
+    | {-empty-} %shift { [] }
 
 -- variable declaration
 vardec :: { VarDecl }
