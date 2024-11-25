@@ -1,5 +1,7 @@
 import Test.Hspec (hspec, describe, it, shouldBe)
 import qualified Lexing.Lexer as Lx
+import Parsing.Parser
+import qualified Parsing.Nodes as Pn
 
 -- This function produces a list of tokens from the input, using alexMonadScan
 move :: Lx.Alex [Lx.Token]
@@ -16,6 +18,9 @@ move = do
 -- Runs the alex monad
 lexString :: String -> Either String [Lx.Token]
 lexString s = Lx.runAlex s move 
+
+parseString :: String -> Either String Pn.Program
+parseString s = Lx.runAlex s parse
 
 main :: IO ()
 main = hspec $ do
@@ -57,3 +62,14 @@ main = hspec $ do
                 [ Lx.NumberLiteral 123123, Lx.Id "g214343"
                 , Lx.NumberLiteral 13323, Lx.Id "hello0", Lx.Id "hei0"
                 ]
+
+    describe "parse" $ do
+        it "can parse basic expression" $ do
+            parseString "hello = 59"
+            `shouldBe`
+            Right (
+                Pn.ExprProg
+                (Pn.OpEx
+                        (Pn.LValEx (Pn.IdLV (Pn.Id "hello")))
+                        Pn.EqOp
+                        (Pn.IntEx 59)))
