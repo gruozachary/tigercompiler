@@ -120,7 +120,7 @@ recordSubs :: { [(Id, Expr)] }
 
 -- LHS values
 lvalue :: { LValue }
-    : typeId %shift { IdLV (tyIdToId $1) }
+    : lvalue { IdLV $1 }
     | lvalue '.' id { RecLV $1 $3 }
     | lvalue '[' exp ']' { ArrLV $1 $3 }
 
