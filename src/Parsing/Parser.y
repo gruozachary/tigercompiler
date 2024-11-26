@@ -12,12 +12,15 @@ import Parsing.Nodes
 %lexer { lexer } { L.EOF }
 
 -- precedences
+%right ':='
 %left '|'
 %left '&'
 %nonassoc '>=' '<=' '=' '<>' '<' '>'
 %left '+' '-'
 %left '*' '/'
 %left NEG
+
+%right of
 
 %token
     array { L.Array } 
@@ -85,7 +88,7 @@ exp :: { Expr }
     | numberLiteral { IntEx $1 }
     | stringLiteral { StrEx $1 }
 -- array and record creations
-    | typeId '[' exp ']' of exp %shift { ArrayEx $1 $3 $6 }
+    | typeId '[' exp ']' of exp { ArrayEx $1 $3 $6 }
     | typeId '{' '}' { RecordEx $1 [] }
     | typeId '{' id '=' exp recordSubs '}' { RecordEx $1 (($3, $5) : $6) }
 -- variables, field, elements of an array
@@ -120,8 +123,9 @@ recordSubs :: { [(Id, Expr)] }
 
 -- LHS values
 lvalue :: { LValue }
-    : id { IdLV $1 }
+    : typeId %shift { IdLV (tyIdToId $1) }
     | lvalue '.' id { RecLV $1 $3 }
+    | typeId '[' exp ']' { ArrLV (IdLV (tyIdToId $1)) $3}
     | lvalue '[' exp ']' { ArrLV $1 $3 }
 
 -- operators
