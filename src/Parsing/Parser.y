@@ -120,7 +120,7 @@ recordSubs :: { [(Id, Expr)] }
 
 -- LHS values
 lvalue :: { LValue }
-    : lvalue { IdLV $1 }
+    : id { IdLV $1 }
     | lvalue '.' id { RecLV $1 $3 }
     | lvalue '[' exp ']' { ArrLV $1 $3 }
 
