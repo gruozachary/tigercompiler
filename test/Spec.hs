@@ -110,3 +110,35 @@ main = hspec $ do
                         (Just (Pn.TyFields [(Pn.Id "x",Pn.TyId "int"),(Pn.Id "y",Pn.TyId "int")])) 
                         (Just (Pn.TyId "int")) 
                         (Pn.OpEx (Pn.LValEx (Pn.IdLV (Pn.Id "x"))) Pn.MultOp (Pn.LValEx (Pn.IdLV (Pn.Id "y"))))]])
+
+        describe "parse type declarations" $ do
+            it "parse array type declaration" $ do
+                parseString "type int_array = array of int"
+                `shouldBe`
+                Right (
+                    Pn.ChunkProg [
+                        Pn.TypeChunk [
+                            Pn.TypeDecl (Pn.Id "int_array") (Pn.ArrayTy (Pn.TyId "int"))]])
+        
+        describe "parse let expressions" $ do
+            it "parse hello world" $ do
+                parseString "let var s := \"Hello World\" in print(s) end"
+                `shouldBe`
+                Right (
+                    Pn.ExprProg 
+                    (Pn.LetEx 
+                        [Pn.VarChunk (Pn.VarDecl (Pn.Id "s") Nothing (Pn.StrEx "Hello World"))] 
+                        [Pn.FunCallEx (Pn.Id "print") [Pn.LValEx (Pn.IdLV (Pn.Id "s"))]]))
+            
+            it "parse use of custom array type" $ do
+                parseString "let type int_array = array of int \
+                                \var table := int_array[100] of 0 \
+                            \in print(table[0]) \
+                            \end"
+                `shouldBe`
+                Right (
+                    Pn.ExprProg
+                    (Pn.LetEx 
+                        [Pn.TypeChunk [Pn.TypeDecl (Pn.Id "int_array") (Pn.ArrayTy (Pn.TyId "int"))],
+                            Pn.VarChunk (Pn.VarDecl (Pn.Id "table") Nothing (Pn.ArrayEx (Pn.TyId "int_array") (Pn.IntEx 100) (Pn.IntEx 0)))] 
+                        [Pn.FunCallEx (Pn.Id "print") [Pn.LValEx (Pn.ArrLV (Pn.IdLV (Pn.Id "table")) (Pn.IntEx 0))]]))
