@@ -98,3 +98,15 @@ main = hspec $ do
                         (Just (Pn.TyFields [(Pn.Id "x", Pn.TyId "int")]))
                         (Just (Pn.TyId "int")) 
                         (Pn.OpEx (Pn.LValEx (Pn.IdLV (Pn.Id "x"))) Pn.AddOp (Pn.IntEx 1))]])
+            
+            it "parse two parameter function declaration" $ do
+                parseString "function mulTwo (x : int, y : int) : int = x * y"
+                `shouldBe`
+                Right (
+                    Pn.ChunkProg 
+                    [Pn.FunChunk 
+                    [Pn.Function 
+                        (Pn.Id "mulTwo") 
+                        (Just (Pn.TyFields [(Pn.Id "x",Pn.TyId "int"),(Pn.Id "y",Pn.TyId "int")])) 
+                        (Just (Pn.TyId "int")) 
+                        (Pn.OpEx (Pn.LValEx (Pn.IdLV (Pn.Id "x"))) Pn.MultOp (Pn.LValEx (Pn.IdLV (Pn.Id "y"))))]])
