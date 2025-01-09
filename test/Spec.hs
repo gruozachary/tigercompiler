@@ -25,13 +25,13 @@ parseString s = Lx.runAlex s parse
 main :: IO ()
 main = hspec $ do
     describe "lexString" $ do
-        it "can lex nested comments" $ do
+        it "lex nested comments" $ do
             lexString
                 "/* Comment /* Nested comment */ Comment */"
                 `shouldBe`
                 Right []
         
-        it "can lex all keywords" $ do
+        it "lex all keywords" $ do
             lexString
                 "array if then else while for to do let in end of break nil \
                 \function var type import primitive"
@@ -43,19 +43,19 @@ main = hspec $ do
                     , Lx.Primitive
                     ]
         
-        it "can lex string escapes" $ do
+        it "lex string escapes" $ do
             lexString
                 "\"\\a \\b \\f \\n \\r \\t \\v\""
                 `shouldBe`
                 Right [ Lx.StringLiteral "\\a \\b \\f \\n \\r \\t \\v" ]
         
-        it "can lex all string escape nums" $ do
+        it "lex all string escape nums" $ do
             lexString "\"\\ff \\FF \\fF \\123 \\123 \\000 \\377\""
             `shouldBe`
             Right
                 [ Lx.StringLiteral "\\ff \\FF \\fF \\123 \\123 \\000 \\377" ]
         
-        it "can lex number literals vs identifiers" $ do
+        it "lex number literals vs identifiers" $ do
             lexString "123123 g214343 13323 hello0 hei0"
             `shouldBe`
             Right 
@@ -64,7 +64,7 @@ main = hspec $ do
                 ]
 
     describe "parse" $ do
-        it "can parse basic expression" $ do
+        it "parse basic expression" $ do
             parseString "hello = 59"
             `shouldBe`
             Right (
@@ -74,8 +74,20 @@ main = hspec $ do
                         Pn.EqOp
                         (Pn.IntEx 59)))
 
-        describe "can parse function declarations" $ do
-            it "can parse one parameter function declaration" $ do
+        describe "parse function declarations" $ do
+            it "parse zero parameter function declaration" $ do
+                parseString "function five() : int = 5"
+                `shouldBe`
+                Right (
+                    Pn.ChunkProg 
+                    [Pn.FunChunk 
+                    [Pn.Function 
+                    (Pn.Id "five") 
+                    Nothing 
+                    (Just (Pn.TyId "int")) 
+                    (Pn.IntEx 5)]])
+
+            it "parse one parameter function declaration" $ do
                 parseString "function addOne(x : int) : int = x + 1"
                 `shouldBe`
                 Right (
@@ -83,6 +95,6 @@ main = hspec $ do
                     [Pn.FunChunk 
                     [Pn.Function 
                         (Pn.Id "addOne") 
-                        (Pn.TyFields [(Pn.Id "x", Pn.TyId "int")]) 
+                        (Just (Pn.TyFields [(Pn.Id "x", Pn.TyId "int")]))
                         (Just (Pn.TyId "int")) 
                         (Pn.OpEx (Pn.LValEx (Pn.IdLV (Pn.Id "x"))) Pn.AddOp (Pn.IntEx 1))]])
