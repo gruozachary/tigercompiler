@@ -173,14 +173,14 @@ tydec :: { TypeDecl }
 
 -- function declaration
 fundec :: { FunDecl }
-    : function id '(' ')' '=' exp { Function $2 Nothing Nothing $6 }
-    | function id '(' tyFields ')' '=' exp { Function $2 (Just $4) Nothing $7 }
-    | function id '(' ')' ':' typeId '=' exp { Function $2 Nothing (Just $6) $8 }
-    | function id '(' tyFields ')' ':' typeId '=' exp { Function $2 (Just $4) (Just $7) $9 }
-    | primitive id '(' ')' { Primitive $2 Nothing Nothing } 
-    | primitive id '(' tyFields ')' { Primitive $2 (Just $4) Nothing } 
-    | primitive id '(' ')' ':' typeId { Primitive $2 Nothing (Just $6) }
-    | primitive id '(' tyFields ')' ':' typeId { Primitive $2 (Just $4) (Just $7) }
+    : function id '(' ')' '=' exp { Function $2 (TyFields []) Nothing $6 }
+    | function id '(' tyFields ')' '=' exp { Function $2 $4 Nothing $7 }
+    | function id '(' ')' ':' typeId '=' exp { Function $2 (TyFields [])  (Just $6) $8 }
+    | function id '(' tyFields ')' ':' typeId '=' exp { Function $2 $4 (Just $7) $9 }
+    | primitive id '(' ')' { Primitive $2 (TyFields []) Nothing } 
+    | primitive id '(' tyFields ')' { Primitive $2 $4 Nothing } 
+    | primitive id '(' ')' ':' typeId { Primitive $2 (TyFields []) (Just $6) }
+    | primitive id '(' tyFields ')' ':' typeId { Primitive $2 $4 (Just $7) }
 
 -- types
 ty :: { Type }

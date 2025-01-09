@@ -72,8 +72,8 @@ data Chunk
     deriving (Show, Eq)
 
 data FunDecl
-    = Function Id (Maybe TyFields) (Maybe TyId) Expr
-    | Primitive Id (Maybe TyFields) (Maybe TyId)
+    = Function Id TyFields (Maybe TyId) Expr
+    | Primitive Id TyFields (Maybe TyId)
     deriving (Show, Eq)
 data TypeDecl = TypeDecl Id Type deriving (Show, Eq)
 data VarDecl = VarDecl Id (Maybe TyId) Expr deriving (Show, Eq)
