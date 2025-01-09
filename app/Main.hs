@@ -1,9 +1,10 @@
 module Main (main) where
 
 import Lexing.Lexer
+import Parsing.Parser
 
 main :: IO ()
 main = do
     s <- getLine
-    print $ lexString s
+    print (runAlex s parse)
 

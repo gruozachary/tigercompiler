@@ -1,68 +1,144 @@
 import Test.Hspec (hspec, describe, it, shouldBe)
 import qualified Lexing.Lexer as Lx
+import Parsing.Parser
+import qualified Parsing.Nodes as Pn
+
+-- This function produces a list of tokens from the input, using alexMonadScan
+move :: Lx.Alex [Lx.Token]
+move = do
+    m <- Lx.alexMonadScan
+    case m of
+        Nothing            -> move
+        Just t -> case t of
+            Lx.EOF -> return []
+            _   -> do
+                ts <- move
+                return (t : ts)
+
+-- Runs the alex monad
+lexString :: String -> Either String [Lx.Token]
+lexString s = Lx.runAlex s move 
+
+parseString :: String -> Either String Pn.Program
+parseString s = Lx.runAlex s parse
 
 main :: IO ()
 main = hspec $ do
     describe "lexString" $ do
-        it "can lex nested comments" $ do
-            Lx.lexString
+        it "lex nested comments" $ do
+            lexString
                 "/* Comment /* Nested comment */ Comment */"
                 `shouldBe`
                 Right []
         
-        it "can lex all keywords" $ do
-            Lx.lexString
+        it "lex all keywords" $ do
+            lexString
                 "array if then else while for to do let in end of break nil \
                 \function var type import primitive"
                 `shouldBe`
                 Right
-                    [ Lx.Token Lx.Array (Lx.AlexPn 0 1 1)
-                    , Lx.Token Lx.If (Lx.AlexPn 6 1 7)
-                    , Lx.Token Lx.Then (Lx.AlexPn 9 1 10)
-                    , Lx.Token Lx.Else (Lx.AlexPn 14 1 15)
-                    , Lx.Token Lx.While (Lx.AlexPn 19 1 20)
-                    , Lx.Token Lx.For (Lx.AlexPn 25 1 26)
-                    , Lx.Token Lx.To (Lx.AlexPn 29 1 30)
-                    , Lx.Token Lx.Do (Lx.AlexPn 32 1 33)
-                    , Lx.Token Lx.Let (Lx.AlexPn 35 1 36)
-                    , Lx.Token Lx.In (Lx.AlexPn 39 1 40)
-                    , Lx.Token Lx.End (Lx.AlexPn 42 1 43)
-                    , Lx.Token Lx.Of (Lx.AlexPn 46 1 47)
-                    , Lx.Token Lx.Break (Lx.AlexPn 49 1 50)
-                    , Lx.Token Lx.Nil (Lx.AlexPn 55 1 56)
-                    , Lx.Token Lx.Function (Lx.AlexPn 59 1 60)
-                    , Lx.Token Lx.Var (Lx.AlexPn 68 1 69)
-                    , Lx.Token Lx.Type (Lx.AlexPn 72 1 73)
-                    , Lx.Token Lx.Import (Lx.AlexPn 77 1 78)
-                    , Lx.Token Lx.Primitive (Lx.AlexPn 84 1 85)
+                    [ Lx.Array, Lx.If, Lx.Then, Lx.Else, Lx.While, Lx.For
+                    , Lx.To, Lx.Do, Lx.Let, Lx.In, Lx.End, Lx.Of, Lx.Break
+                    , Lx.Nil, Lx.Function, Lx.Var, Lx.Type, Lx.Import
+                    , Lx.Primitive
                     ]
         
-        it "can lex string escapes" $ do
-            Lx.lexString
+        it "lex string escapes" $ do
+            lexString
                 "\"\\a \\b \\f \\n \\r \\t \\v\""
                 `shouldBe`
-                Right
-                    [ Lx.Token
-                        (Lx.StringLiteral "\\a \\b \\f \\n \\r \\t \\v")
-                        (Lx.AlexPn 21 1 22)
-                    ]
+                Right [ Lx.StringLiteral "\\a \\b \\f \\n \\r \\t \\v" ]
         
-        it "can lex all string escape nums" $ do
-            Lx.lexString "\"\\ff \\FF \\fF \\123 \\123 \\000 \\377\""
+        it "lex all string escape nums" $ do
+            lexString "\"\\ff \\FF \\fF \\123 \\123 \\000 \\377\""
             `shouldBe`
             Right
-                [ Lx.Token
-                    (Lx.StringLiteral "\\ff \\FF \\fF \\123 \\123 \\000 \\377")
-                    (Lx.AlexPn 32 1 33)
-                ]
+                [ Lx.StringLiteral "\\ff \\FF \\fF \\123 \\123 \\000 \\377" ]
         
-        it "can lex number literals vs identifiers" $ do
-            Lx.lexString "123123 g214343 13323 hello0 hei0"
+        it "lex number literals vs identifiers" $ do
+            lexString "123123 g214343 13323 hello0 hei0"
             `shouldBe`
             Right 
-                [ Lx.Token (Lx.NumberLiteral 123123) (Lx.AlexPn 0 1 1)
-                , Lx.Token (Lx.Id "g214343") (Lx.AlexPn 7 1 8)
-                , Lx.Token (Lx.NumberLiteral 13323) (Lx.AlexPn 15 1 16)
-                , Lx.Token (Lx.Id "hello0") (Lx.AlexPn 21 1 22)
-                , Lx.Token (Lx.Id "hei0") (Lx.AlexPn 28 1 29)
+                [ Lx.NumberLiteral 123123, Lx.Id "g214343"
+                , Lx.NumberLiteral 13323, Lx.Id "hello0", Lx.Id "hei0"
                 ]
+
+    describe "parse" $ do
+        it "parse basic expression" $ do
+            parseString "hello = 59"
+            `shouldBe`
+            Right (
+                Pn.ExprProg
+                (Pn.OpEx
+                        (Pn.LValEx (Pn.IdLV (Pn.Id "hello")))
+                        Pn.EqOp
+                        (Pn.IntEx 59)))
+
+        describe "parse function declarations" $ do
+            it "parse zero parameter function declaration" $ do
+                parseString "function five() : int = 5"
+                `shouldBe`
+                Right (
+                    Pn.ChunkProg 
+                    [Pn.FunChunk 
+                    [Pn.Function 
+                    (Pn.Id "five") 
+                    (Pn.TyFields [])
+                    (Just (Pn.TyId "int")) 
+                    (Pn.IntEx 5)]])
+
+            it "parse one parameter function declaration" $ do
+                parseString "function addOne(x : int) : int = x + 1"
+                `shouldBe`
+                Right (
+                    Pn.ChunkProg 
+                    [Pn.FunChunk 
+                    [Pn.Function 
+                        (Pn.Id "addOne") 
+                        (Pn.TyFields [(Pn.Id "x", Pn.TyId "int")])
+                        (Just (Pn.TyId "int")) 
+                        (Pn.OpEx (Pn.LValEx (Pn.IdLV (Pn.Id "x"))) Pn.AddOp (Pn.IntEx 1))]])
+            
+            it "parse two parameter function declaration" $ do
+                parseString "function mulTwo (x : int, y : int) : int = x * y"
+                `shouldBe`
+                Right (
+                    Pn.ChunkProg 
+                    [Pn.FunChunk 
+                    [Pn.Function 
+                        (Pn.Id "mulTwo") 
+                        (Pn.TyFields [(Pn.Id "x",Pn.TyId "int"),(Pn.Id "y",Pn.TyId "int")])
+                        (Just (Pn.TyId "int")) 
+                        (Pn.OpEx (Pn.LValEx (Pn.IdLV (Pn.Id "x"))) Pn.MultOp (Pn.LValEx (Pn.IdLV (Pn.Id "y"))))]])
+
+        describe "parse type declarations" $ do
+            it "parse array type declaration" $ do
+                parseString "type int_array = array of int"
+                `shouldBe`
+                Right (
+                    Pn.ChunkProg [
+                        Pn.TypeChunk [
+                            Pn.TypeDecl (Pn.Id "int_array") (Pn.ArrayTy (Pn.TyId "int"))]])
+        
+        describe "parse let expressions" $ do
+            it "parse hello world" $ do
+                parseString "let var s := \"Hello World\" in print(s) end"
+                `shouldBe`
+                Right (
+                    Pn.ExprProg 
+                    (Pn.LetEx 
+                        [Pn.VarChunk (Pn.VarDecl (Pn.Id "s") Nothing (Pn.StrEx "Hello World"))] 
+                        [Pn.FunCallEx (Pn.Id "print") [Pn.LValEx (Pn.IdLV (Pn.Id "s"))]]))
+            
+            it "parse use of custom array type" $ do
+                parseString "let type int_array = array of int \
+                                \var table := int_array[100] of 0 \
+                            \in print(table[0]) \
+                            \end"
+                `shouldBe`
+                Right (
+                    Pn.ExprProg
+                    (Pn.LetEx 
+                        [Pn.TypeChunk [Pn.TypeDecl (Pn.Id "int_array") (Pn.ArrayTy (Pn.TyId "int"))],
+                            Pn.VarChunk (Pn.VarDecl (Pn.Id "table") Nothing (Pn.ArrayEx (Pn.TyId "int_array") (Pn.IntEx 100) (Pn.IntEx 0)))] 
+                        [Pn.FunCallEx (Pn.Id "print") [Pn.LValEx (Pn.ArrLV (Pn.IdLV (Pn.Id "table")) (Pn.IntEx 0))]]))

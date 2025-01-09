@@ -1,5 +1,8 @@
 {
-module Lexing.Lexer(AlexPosn(..), TokenData(..), Token(..), lexString) where
+module Lexing.Lexer
+    ( AlexPosn(..), Token(..), Alex
+    , alexMonadScan, alexError, alexGetInput, runAlex
+    ) where
 }
 
 %wrapper "monadUserState"
@@ -73,7 +76,7 @@ tokens :-
 
 <sp>         " "       { space }
 {
-data TokenData
+data Token
     -- Keywords
     = Array
     | If
@@ -126,12 +129,7 @@ data TokenData
     deriving (Show, Eq)
 
 -- Alex requires implementation to show what to do when EOF is encountered
-alexEOF = do
-    (pos, _, _, _) <- alexGetInput
-    return $ Just $ Token EOF pos
-
--- A token type to encapsulate postion information and the kind of token
-data Token = Token TokenData AlexPosn deriving (Show, Eq)
+alexEOF = return (Just EOF)
 
 -- Custom state defined for use with the monadUserState wrapper
 data AlexUserState = AlexUserState
@@ -146,12 +144,12 @@ alexInitUserState = AlexUserState
     }
 
 -- A simple function for raising a token that takes no constructors into the Alex monadic context
-simpleTok :: TokenData -> AlexInput -> Int -> Alex (Maybe Token)
-simpleTok t (pos, _, _, _) _ = return $ Just $ Token t pos
+simpleTok :: Token -> AlexInput -> Int -> Alex (Maybe Token)
+simpleTok t _ _ = return (Just t)
 
 -- A helper function for raising more complex tokens into the Alex monadic context
-posStringTok :: (Int -> String -> TokenData) -> AlexInput -> Int -> Alex (Maybe Token)
-posStringTok f (pos, _, _, s) l = return $ Just $ Token (f l s) pos
+posStringTok :: (Int -> String -> Token) -> AlexInput -> Int -> Alex (Maybe Token)
+posStringTok f (_, _, _, s) l = return $ (Just (f l s))
 
 -- Handles ID tokens
 idTok :: AlexInput -> Int -> Alex (Maybe Token)
@@ -190,10 +188,10 @@ beginString _ _ = do
 
 -- Ends the string and creates a string literal token
 endString :: AlexInput -> Int -> Alex (Maybe Token)
-endString (pos, _, _, _) _ = do
+endString _ _ = do
     s <- alexGetUserState
     alexSetStartCode 0
-    return $ Just $ Token (StringLiteral $ stringValue s) pos
+    return $ Just (StringLiteral $ stringValue s)
 
 -- Adds a new character to the string in our state
 stringChar :: AlexInput -> Int -> Alex (Maybe Token) 
@@ -217,20 +215,4 @@ backslashChar i l = alexSetStartCode sp >> stringChar i l
 -- Consumes a space character
 space :: AlexInput -> Int -> Alex (Maybe Token)
 space i l = alexSetStartCode string >> stringChar i l 
-
--- This function produces a list of tokens from the input, using alexMonadScan
-move :: Alex [Token]
-move = do
-    m <- alexMonadScan
-    case m of
-        Nothing            -> move
-        Just t@(Token d _) -> case d of
-            EOF -> return []
-            _   -> do
-                ts <- move
-                return (t : ts)
-
--- Runs the alex monad
-lexString :: String -> Either String [Token]
-lexString s = runAlex s move 
 }
