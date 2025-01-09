@@ -73,3 +73,16 @@ main = hspec $ do
                         (Pn.LValEx (Pn.IdLV (Pn.Id "hello")))
                         Pn.EqOp
                         (Pn.IntEx 59)))
+
+        describe "can parse function declarations" $ do
+            it "can parse one parameter function declaration" $ do
+                parseString "function addOne(x : int) : int = x + 1"
+                `shouldBe`
+                Right (
+                    Pn.ChunkProg 
+                    [Pn.FunChunk 
+                    [Pn.Function 
+                        (Pn.Id "addOne") 
+                        (Pn.TyFields [(Pn.Id "x", Pn.TyId "int")]) 
+                        (Just (Pn.TyId "int")) 
+                        (Pn.OpEx (Pn.LValEx (Pn.IdLV (Pn.Id "x"))) Pn.AddOp (Pn.IntEx 1))]])

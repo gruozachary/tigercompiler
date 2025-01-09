@@ -182,6 +182,7 @@ ty :: { Type }
 
 tyFields :: { TyFields }
     : id ':' typeId moreTyFields { TyFields (($1, $3) : $4)}
+    -- couldn't tyFields also be empty?
 moreTyFields :: { [(Id, TyId)] }
     : ',' id ':' typeId moreTyFields { ($2, $4) : $5 } 
     | {-empty-} { [] }
@@ -202,5 +203,5 @@ lexer f = do
     m <- L.alexMonadScan
     case m of
         Nothing -> lexer f
-        (Just x) -> f x
+        Just x -> f x
 }
