@@ -45,6 +45,34 @@ getNextId = do
     modify (\s -> s { nextId = i + 1 })
     return i
 
+matchTy :: Error -> Ty -> Ty -> Analyser t ()
+matchTy e t0 t1
+    | t0 == t1  = return ()
+    | otherwise = lift (Left e)
+
+expectInt :: Error -> Ty -> Analyser t ()
+expectString :: Error -> Ty -> Analyser t ()
+expectRecord :: Error -> Ty -> Analyser t ([(String, Ty)], Int)
+expectArray :: Error -> Ty -> Analyser t (Ty, Int)
+expectNil :: Error -> Ty -> Analyser t ()
+expectUnit :: Error -> Ty -> Analyser t ()
+expectName :: Error -> Ty -> Analyser t (String, Maybe Ty)
+
+expectInt e TInt = return ()
+expectInt e _ = lift (Left e)
+expectString e TString = return ()
+expectString e _ = lift (Left e)
+expectRecord e t@(TRecord x y) = return (x, y)
+expectRecord e _ = lift (Left e)
+expectArray e t@(TArray x y) = return (x, y)
+expectArray e _ = lift (Left e)
+expectNil e TNil = return ()
+expectNil e _ = lift (Left e)
+expectUnit e TUnit = return ()
+expectUnit e _ = lift (Left e)
+expectName e t@(TName x y) = return (x, y)
+expectName e _ = lift (Left e)
+
 transTy :: (SymbolTable t) => N.Type -> Analyser t Ty
 transTy = undefined
 
@@ -53,17 +81,14 @@ transExpr N.NilEx = return ((), TNil)
 transExpr (N.IntEx _) = return ((), TInt)
 transExpr (N.StrEx _) = return ((), TString)
 transExpr (N.ArrayEx tid size element) = do
-    arrayT <- transTy (N.IdTy tid)
-    (et, i) <- case arrayT of
-        (TArray t i) -> return (t, i)
-        _ -> lift (Left "type of array is not defined")
+    t <- transTy (N.IdTy tid)
+    (et, _) <- expectArray "type of array is not defined" t
     case size of
         N.IntEx _ -> return ()
         _ -> lift (Left "size of array is not an integer literal")
-    elementT <- transExpr element
-    if snd elementT == et
-        then return ((), TArray et i) 
-        else lift (Left "array type does not match initial elements")
+    (_, et') <- transExpr element
+    matchTy "array type does not match element initialiser" et et'
+    return ((), t)
 transExpr (N.RecordEx tid entries) = undefined
 transExpr (N.LValEx _) = undefined 
 transExpr (N.FunCallEx _ _ ) = undefined
