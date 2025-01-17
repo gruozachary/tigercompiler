@@ -16,8 +16,6 @@ data Ty
     | TUnit
     | TName String (Maybe Ty) deriving Eq
 
-    -- * might need some sort of unique identifier
-
 -- data type for entries into the venv
 data EnvEntry
     = VarEntry Ty
@@ -47,7 +45,6 @@ getNextId = do
     modify (\s -> s { nextId = i + 1 })
     return i
 
-
 transTy :: (SymbolTable t) => N.Type -> Analyser t Ty
 transTy = undefined
 
@@ -59,7 +56,7 @@ transExpr (N.ArrayEx tid size element) = do
     arrayT <- transTy (N.IdTy tid)
     (et, i) <- case arrayT of
         (TArray t i) -> return (t, i)
-        _ -> lift (Left "type of array is not real")
+        _ -> lift (Left "type of array is not defined")
     case size of
         N.IntEx _ -> return ()
         _ -> lift (Left "size of array is not an integer literal")
@@ -68,8 +65,7 @@ transExpr (N.ArrayEx tid size element) = do
         then return ((), TArray et i) 
         else lift (Left "array type does not match initial elements")
 transExpr (N.RecordEx tid entries) = undefined
-    -- t <- transTy (N.IdTy tid)
-transExpr (N.LValEx _) = undefined
+transExpr (N.LValEx _) = undefined 
 transExpr (N.FunCallEx _ _ ) = undefined
 transExpr (N.NegEx _ ) = undefined
 transExpr (N.OpEx _ _ _) = undefined
@@ -78,7 +74,7 @@ transExpr (N.AssignEx _ _ ) = undefined
 transExpr (N.IfEx _ _ _) = undefined
 transExpr (N.WhileEx _ _) = undefined
 transExpr (N.ForEx _ _ _ _) = undefined
-transExpr (N.BreakEx) = undefined
+transExpr (N.BreakEx) = return ((), TUnit)
 transExpr (N.LetEx _ _) = undefined
 
 transChunk :: (SymbolTable t) => N.Chunk -> Analyser t ()
