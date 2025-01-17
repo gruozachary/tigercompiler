@@ -28,6 +28,7 @@ library
       Lexing.Lexer
       Parsing.Nodes
       Parsing.Parser
+      Semantics.SymbolTable
   other-modules:
       Paths_tigercompiler
   autogen-modules:
