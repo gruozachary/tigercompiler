@@ -1,21 +1,33 @@
+{-# LANGUAGE DeriveFunctor #-}
 module Semantics.SymbolTable
     ( SymbolTable, new, insert, look, entries, add
     ) where
 
+import qualified Data.Map as Map
+
 class SymbolTable t where
     -- provides an empty table
-    new :: t k a
+    new :: t a
     -- inserts an element into the table, OVERWRITING existing elements if the
-    -- key already exists
-    insert :: t k a -> k -> a -> t k a
-    -- returns the value associated with a key
-    look :: t k a -> k -> a
+    -- Stringey already exists
+    insert :: t a -> String -> a -> t a
+    -- returns the value associated with a Stringey
+    look :: t a -> String -> Maybe a
     -- returns the set of entries in the table
-    entries :: t k a -> [(k, a)]
-    -- combines to symbol tables, existing elements in t0 being overwritten by
+    entries :: t a -> [(String, a)]
+    -- combines two symbol tables, existing elements in t0 being overwritten by
     -- elements in t1
-    add :: t k a -> t k a -> t k a
+    add :: t a -> t a -> t a
     add t0 = foldr (\(k, x) t -> insert t k x) t0 . entries
 
--- TODO: add Map implementation
+newtype MST v = MST (Map.Map String v) deriving Functor
+
+instance SymbolTable MST where
+    new = MST Map.empty
+
+    insert (MST m) k a = MST $ Map.insert k a m
+    look (MST m) k = Map.lookup k m
+    entries (MST m) = Map.toList m
+    add (MST m1) (MST m2) = MST (Map.union m1 m2)
+
 -- TODO: add Trie implementation
