@@ -49,7 +49,11 @@ transExpr (N.FunCallEx (N.Id fid) args) = do
     argTs' <- map snd <$> traverse transExpr args
     matchTwo "function arguments are not of expected type" argTs argTs' 
     return ((), retT)
-transExpr (N.NegEx _ ) = undefined
+transExpr (N.NegEx e) = do
+    (_, t) <- transExpr e
+    expectInt "cannot negate non integers" t
+    return ((), t)
+    
 transExpr (N.OpEx _ _ _) = undefined
 transExpr (N.Exs _) = undefined
 transExpr (N.AssignEx _ _ ) = undefined
