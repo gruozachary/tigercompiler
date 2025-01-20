@@ -29,6 +29,7 @@ library
       Parsing.Nodes
       Parsing.Parser
       Semantics.Analyser
+      Semantics.Semant
       Semantics.SymbolTable
   other-modules:
       Paths_tigercompiler
