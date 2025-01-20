@@ -1,7 +1,7 @@
 module Semantics.Analyser
     ( Ty(..), EnvEntry(..), Exp, Expty, Data(..), Error, Analyser
     , getNextId, matchTwo, expectInt, expectString, expectRecord, expectArray
-    , expectNil, expectUnit, expectName, expectJust
+    , expectNil, expectUnit, expectName, expectFun, expectJust
     ) where
 import Control.Monad.State (StateT, gets, modify, MonadTrans (lift))
 
@@ -51,6 +51,8 @@ expectNil :: Error -> Ty -> Analyser t ()
 expectUnit :: Error -> Ty -> Analyser t ()
 expectName :: Error -> Ty -> Analyser t (String, Maybe Ty)
 
+expectFun :: Error -> EnvEntry -> Analyser t ([Ty], Ty)
+
 expectInt _ TInt = return ()
 expectInt e _ = lift (Left e)
 expectString _ TString = return ()
@@ -65,6 +67,9 @@ expectUnit _ TUnit = return ()
 expectUnit e _ = lift (Left e)
 expectName _ (TName x y) = return (x, y)
 expectName e _ = lift (Left e)
+
+expectFun _ (FunEntry x y) = return (x, y)
+expectFun e _ = lift (Left e)
 
 expectJust :: Error -> Maybe a -> Analyser t a
 expectJust e Nothing = lift (Left e)

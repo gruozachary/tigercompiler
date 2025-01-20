@@ -42,7 +42,13 @@ transExpr (N.RecordEx (N.TyId tid) ents) = do
     matchTwo "record fields invalid" stmap es'
     return ((), t)
 transExpr (N.LValEx _) = undefined 
-transExpr (N.FunCallEx _ _ ) = undefined
+transExpr (N.FunCallEx (N.Id fid) args) = do
+    env <- gets currentEnv
+    f <- expectJust "function undefined" (look env fid)
+    (argTs, retT) <- expectFun "cannot call non functions" f
+    argTs' <- map snd <$> traverse transExpr args
+    matchTwo "function arguments are not of expected type" argTs argTs' 
+    return ((), retT)
 transExpr (N.NegEx _ ) = undefined
 transExpr (N.OpEx _ _ _) = undefined
 transExpr (N.Exs _) = undefined
