@@ -1,7 +1,7 @@
 module Semantics.Analyser
     ( Ty(..), EnvEntry(..), Exp, Expty, Data(..), Error, Analyser
-    , getNextId, matchTy, expectInt, expectString, expectRecord, expectArray
-    , expectNil, expectUnit, expectName
+    , getNextId, matchTwo, expectInt, expectString, expectRecord, expectArray
+    , expectNil, expectUnit, expectName, expectJust
     ) where
 import Control.Monad.State (StateT, gets, modify, MonadTrans (lift))
 
@@ -12,7 +12,8 @@ data Ty
     | TArray Ty Int
     | TNil
     | TUnit
-    | TName String (Maybe Ty) deriving Eq
+    | TName String (Maybe Ty)
+    deriving (Ord, Eq)
 
 -- data type for entries into the venv
 data EnvEntry
@@ -37,8 +38,8 @@ getNextId = do
     modify (\s -> s { nextId = i + 1 })
     return i
 
-matchTy :: Error -> Ty -> Ty -> Analyser t ()
-matchTy e t0 t1
+matchTwo :: (Eq a) => Error -> a -> a -> Analyser t ()
+matchTwo e t0 t1
     | t0 == t1  = return ()
     | otherwise = lift (Left e)
 
@@ -64,3 +65,7 @@ expectUnit _ TUnit = return ()
 expectUnit e _ = lift (Left e)
 expectName _ (TName x y) = return (x, y)
 expectName e _ = lift (Left e)
+
+expectJust :: Error -> Maybe a -> Analyser t a
+expectJust e Nothing = lift (Left e)
+expectJust _ (Just x) = return x

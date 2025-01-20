@@ -11,10 +11,13 @@ module Parsing.Nodes
     , Type(..)
     , TyFields(..)
     , TyId(..)
-    , idToTyId, tyIdToId ) where
+    , idToTyId, tyIdToId, idToStr ) where
 
 newtype Id = Id String deriving (Show, Eq)
 newtype TyId = TyId String deriving (Show, Eq)
+
+idToStr :: Id -> String
+idToStr (Id i) = i
 
 idToTyId :: Id -> TyId
 idToTyId (Id x) = TyId x

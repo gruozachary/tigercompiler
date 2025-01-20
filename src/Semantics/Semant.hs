@@ -2,12 +2,14 @@ module Semantics.Semant
     (
     ) where
 
-import Semantics.SymbolTable (SymbolTable (new, fromList))
+import Semantics.SymbolTable
 import qualified Parsing.Nodes as N
 
 import Semantics.Analyser
 import Control.Monad (void)
 import Control.Monad.Trans (lift)
+import Control.Monad.State (gets)
+import Data.List (sort)
 
 eVenv :: (SymbolTable t) => t EnvEntry
 eTenv :: (SymbolTable t) => t Ty
@@ -29,9 +31,16 @@ transExpr (N.ArrayEx tid size element) = do
         N.IntEx _ -> return ()
         _ -> lift (Left "size of array is not an integer literal")
     (_, et') <- transExpr element
-    matchTy "array type does not match element initialiser" et et'
+    matchTwo "array type does not match element initialiser" et et'
     return ((), t)
-transExpr (N.RecordEx tid entries) = undefined
+transExpr (N.RecordEx (N.TyId tid) ents) = do
+    tenv <- gets currentTyEnv
+    t <- expectJust "type undefined" (look tenv tid)
+    stmap <- sort . fst <$> expectRecord "type is not a record" t
+    let (is, es) = unzip ents
+    es' <- sort . zip (map N.idToStr is) . map snd <$> traverse transExpr es
+    matchTwo "record fields invalid" stmap es'
+    return ((), t)
 transExpr (N.LValEx _) = undefined 
 transExpr (N.FunCallEx _ _ ) = undefined
 transExpr (N.NegEx _ ) = undefined
