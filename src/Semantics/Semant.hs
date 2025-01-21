@@ -25,26 +25,24 @@ transExpr N.NilEx = return ((), TNil)
 transExpr (N.IntEx _) = return ((), TInt)
 transExpr (N.StrEx _) = return ((), TString)
 transExpr (N.ArrayEx tid size element) = do
-    t <- transTy (N.IdTy tid)
-    (et, _) <- expectArray "type of array is not defined" t
+    t <- findTy "type of array is not defined" tid
+    (et, _) <- expectArray "can't treat non-array as array" t
     case size of
         N.IntEx _ -> return ()
         _ -> lift (Left "size of array is not an integer literal")
     (_, et') <- transExpr element
     matchTwo "array type does not match element initialiser" et et'
     return ((), t)
-transExpr (N.RecordEx (N.TyId tid) ents) = do
-    tenv <- gets currentTyEnv
-    t <- expectJust "type undefined" (look tenv tid)
+transExpr (N.RecordEx tid ents) = do
+    t <- findTy "type undefined" tid
     stmap <- sort . fst <$> expectRecord "type is not a record" t
     let (is, es) = unzip ents
     es' <- sort . zip (map N.idToStr is) . map snd <$> traverse transExpr es
     matchTwo "record fields invalid" stmap es'
     return ((), t)
 transExpr (N.LValEx _) = undefined 
-transExpr (N.FunCallEx (N.Id fid) args) = do
-    env <- gets currentEnv
-    f <- expectJust "function undefined" (look env fid)
+transExpr (N.FunCallEx fid args) = do
+    f <- findEnvEntry "function undefined" fid
     (argTs, retT) <- expectFun "cannot call non functions" f
     argTs' <- map snd <$> traverse transExpr args
     matchTwo "function arguments are not of expected type" argTs argTs' 
