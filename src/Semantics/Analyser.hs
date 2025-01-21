@@ -2,8 +2,11 @@ module Semantics.Analyser
     ( Ty(..), EnvEntry(..), Exp, Expty, Data(..), Error, Analyser
     , getNextId, matchTwo, expectInt, expectString, expectRecord, expectArray
     , expectNil, expectUnit, expectName, expectFun, expectJust
+    , findEnvEntry, findTy
     ) where
 import Control.Monad.State (StateT, gets, modify, MonadTrans (lift))
+import qualified Parsing.Nodes as N
+import Semantics.SymbolTable
 
 data Ty
     = TInt
@@ -74,3 +77,13 @@ expectFun e _ = lift (Left e)
 expectJust :: Error -> Maybe a -> Analyser t a
 expectJust e Nothing = lift (Left e)
 expectJust _ (Just x) = return x
+
+findEnvEntry :: (SymbolTable t) => Error -> N.Id -> Analyser t EnvEntry
+findEnvEntry  e (N.Id i) = do
+    env <- gets currentEnv
+    expectJust e (look env i)
+
+findTy :: (SymbolTable t) => Error -> N.TyId -> Analyser t Ty
+findTy e (N.TyId i) = do
+    tenv <- gets currentTyEnv
+    expectJust e (look tenv i)
