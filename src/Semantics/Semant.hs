@@ -1,3 +1,4 @@
+{-# LANGUAGE TupleSections #-}
 module Semantics.Semant
     (
     ) where
@@ -10,12 +11,16 @@ import Control.Monad (void)
 import Control.Monad.Trans (lift)
 import Control.Monad.State (gets)
 import Data.List (sort)
+import Data.Functor.Classes (eq1)
 
 eVenv :: (SymbolTable t) => t EnvEntry
 eTenv :: (SymbolTable t) => t Ty
 eVenv = new
 eTenv = fromList [("string", TString), ("int", TInt)]
 -- empty venv and tenv
+
+extract :: (a, Analyser t b) -> Analyser t (a, b)
+extract (a, mb) = fmap (a,)  mb
 
 transTy :: (SymbolTable t) => N.Type -> Analyser t Ty
 transTy = undefined
@@ -54,7 +59,80 @@ transExpr (N.NegEx e) = do
     expectInt "cannot negate non integers" t
     return ((), t)
     
-transExpr (N.OpEx _ _ _) = undefined
+transExpr (N.OpEx e1 N.AddOp e2) = do
+    (_, t1) <- transExpr e1
+    expectInt "cannot add non integers" t1
+    (_, t2) <- transExpr e2
+    expectInt "cannot add non integers" t2
+    return ((), TInt)
+transExpr (N.OpEx e1 N.SubOp e2) = do
+    (_, t1) <- transExpr e1
+    expectInt "cannot subtract non integers" t1
+    (_, t2) <- transExpr e2
+    expectInt "cannot subtract non integers" t2
+    return ((), TInt)
+transExpr (N.OpEx e1 N.MultOp e2) = do
+    (_, t1) <- transExpr e1
+    expectInt "cannot multiply non integers" t1
+    (_, t2) <- transExpr e2
+    expectInt "cannot multiply non integers" t2
+    return ((), TInt)
+transExpr (N.OpEx e1 N.DivOp e2) = do
+    (_, t1) <- transExpr e1
+    expectInt "cannot divide non integers" t1
+    (_, t2) <- transExpr e2
+    expectInt "cannot divide non integers" t2
+    return ((), TInt)
+transExpr (N.OpEx e1 N.EqOp e2) = do
+    (_, t1) <- transExpr e1
+    (_, t2) <- transExpr e2
+    matchTwo "cannot check for equality on different types" t1 t2
+    return ((), TInt)
+transExpr (N.OpEx e1 N.NeqOp e2) = do
+    (_, t1) <- transExpr e1
+    (_, t2) <- transExpr e2
+    matchTwo "cannot check for inequality on different types" t1 t2
+    return ((), TInt)
+transExpr (N.OpEx e1 N.LtOp e2) = do
+    (_, t1) <- transExpr e1
+    expectInt "cannot compare non integers" t1
+    (_, t2) <- transExpr e2
+    expectInt "cannot compare non integers" t2
+    return ((), TInt)
+transExpr (N.OpEx e1 N.LeOp e2) = do
+    (_, t1) <- transExpr e1
+    expectInt "cannot compare non integers" t1
+    (_, t2) <- transExpr e2
+    expectInt "cannot compare non integers" t2
+    return ((), TInt)
+transExpr (N.OpEx e1 N.GtOp e2) = do
+    (_, t1) <- transExpr e1
+    expectInt "cannot compare non integers" t1
+    (_, t2) <- transExpr e2
+    expectInt "cannot compare non integers" t2
+    return ((), TInt)
+transExpr (N.OpEx e1 N.GeOp e2) = do
+    (_, t1) <- transExpr e1
+    expectInt "cannot compare non integers" t1
+    (_, t2) <- transExpr e2
+    expectInt "cannot compare non integers" t2
+    return ((), TInt)
+transExpr (N.OpEx e1 N.AndOp e2) = do
+    (_, t1) <- transExpr e1
+    expectInt "cannot AND non integers" t1
+    (_, t2) <- transExpr e2
+    expectInt "cannot AND non integers" t2
+    return ((), TInt)
+transExpr (N.OpEx e1 N.OrOp e2) = do
+    (_, t1) <- transExpr e1
+    expectInt "cannot OR non integers" t1
+    (_, t2) <- transExpr e2
+    expectInt "cannot OR non integers" t2
+    return ((), TInt)
+
+
+
+
 transExpr (N.Exs _) = undefined
 transExpr (N.AssignEx _ _ ) = undefined
 transExpr (N.IfEx _ _ _) = undefined
