@@ -9,6 +9,7 @@ import Semantics.Analyser
 import Control.Monad (void)
 import Control.Monad.Trans (lift)
 import Data.List (sort)
+import Data.Foldable (traverse_)
 
 eVenv :: (SymbolTable t) => t EnvEntry
 eTenv :: (SymbolTable t) => t Ty
@@ -82,11 +83,16 @@ transExpr (N.ForEx _ ini ub bd) = do
     (_, bdT) <- transExpr bd
     expectInt "for body must not return anything" bdT
     return ((), TUnit)
-transExpr (N.BreakEx) = return ((), TUnit)
-transExpr (N.LetEx _ _) = undefined
+transExpr N.BreakEx = return ((), TUnit)
+transExpr (N.LetEx cs []) = transChunks cs >> return ((), TUnit)
+transExpr (N.LetEx cs bd) = transChunks cs >> transExpr (last bd)
+
 
 transChunk :: (SymbolTable t) => N.Chunk -> Analyser t ()
 transChunk = undefined
+
+transChunks :: (SymbolTable t) => [N.Chunk] -> Analyser t ()
+transChunks = traverse_ transChunk
 
 transOp :: N.Op -> Expty -> Expty -> Analyser t Expty
 transOp N.AddOp (_, lt) (_, rt) = do
