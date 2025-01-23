@@ -64,10 +64,24 @@ transExpr (N.IfEx p b1 mb2) = do
         Just b2 -> do
             (_, t2) <- transExpr b2
             matchTwo "both branches of an if must produce the same type" t1 t2
-        Nothing -> return ()
-    return ((), t1)
-transExpr (N.WhileEx _ _) = undefined
-transExpr (N.ForEx _ _ _ _) = undefined
+            return ((), t1)
+        Nothing -> do
+            expectUnit "type of if must be unit" t1
+            return ((), TUnit)
+transExpr (N.WhileEx p bd) = do
+    (_, pT) <- transExpr p
+    expectInt "can only calculate truthiness of integers" pT
+    (_, bdT) <- transExpr bd
+    expectUnit "body of while can't return a value" bdT
+    return ((), TUnit)
+transExpr (N.ForEx _ ini ub bd) = do
+    (_, iniT) <- transExpr ini
+    expectInt "initialiser must be integer" iniT
+    (_, ubT) <- transExpr ub
+    expectInt "upper bound must be integer" ubT
+    (_, bdT) <- transExpr bd
+    expectInt "for body must not return anything" bdT
+    return ((), TUnit)
 transExpr (N.BreakEx) = return ((), TUnit)
 transExpr (N.LetEx _ _) = undefined
 
