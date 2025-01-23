@@ -40,7 +40,7 @@ transExpr (N.RecordEx tid ents) = do
     es' <- sort . zip (map N.idToStr is) . map snd <$> traverse transExpr es
     matchTwo "record fields invalid" stmap es'
     return ((), t)
-transExpr (N.LValEx _) = undefined  -- TODO
+transExpr (N.LValEx lv) = transLValue lv
 transExpr (N.FunCallEx fid args) = do
     f <- findEnvEntry "function undefined" fid
     (argTs, retT) <- expectFun "cannot call non functions" f
@@ -56,7 +56,11 @@ transExpr (N.OpEx e1 op e2) = do
     r <- transExpr e2
     transOp op l r
 transExpr (N.Exs es) = transExpr (last es) -- es will never be empty
-transExpr (N.AssignEx _ _) = undefined -- TODO
+transExpr (N.AssignEx lv e) = do
+    (_, lvT) <- transLValue lv
+    (_, eT)  <- transExpr e
+    matchTwo "value of RHS does not match LHS" eT lvT
+    return ((), TUnit)
 transExpr (N.IfEx p b1 mb2) = do
     (_, pT) <- transExpr p
     expectInt "can only calculate truthiness of integers" pT
@@ -87,6 +91,9 @@ transExpr N.BreakEx = return ((), TUnit)
 transExpr (N.LetEx cs []) = transChunks cs >> return ((), TUnit)
 transExpr (N.LetEx cs bd) = transChunks cs >> transExpr (last bd)
 
+
+transLValue :: (SymbolTable t) => N.LValue -> Analyser t Expty
+transLValue = undefined
 
 transChunk :: (SymbolTable t) => N.Chunk -> Analyser t ()
 transChunk = undefined
