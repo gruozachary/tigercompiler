@@ -93,7 +93,25 @@ transExpr (N.LetEx cs bd) = transChunks cs >> transExpr (last bd)
 
 
 transLValue :: (SymbolTable t) => N.LValue -> Analyser t Expty
-transLValue = undefined
+transLValue (N.IdLV i) = do
+    envEntry <- findEnvEntry "variable not found" i
+    case envEntry of
+        (VarEntry t) -> return ((), t)
+        _ -> lift (Left "cannot modify a function")
+transLValue (N.RecLV lvalue (N.Id i)) = do
+    (_, recordT) <- transLValue lvalue
+    (pairs, _) <- expectRecord "cannot get member from a non-record" recordT
+    case lookup i pairs of
+        Nothing -> lift (Left "cannot get members of nothing")
+        (Just ty) -> return ((), ty) 
+
+transLValue (N.ArrLV lvalue e) = do
+    (_, arrayT) <- transLValue lvalue
+    (elementT, _) <- expectArray "cannot index a non-array" arrayT
+    (_, eT) <- transExpr e
+    expectInt "array index must be an integer" eT
+    return ((), elementT)
+    
 
 transChunk :: (SymbolTable t) => N.Chunk -> Analyser t ()
 transChunk = undefined
