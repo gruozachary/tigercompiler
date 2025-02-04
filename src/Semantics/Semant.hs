@@ -10,6 +10,8 @@ import Control.Monad (void)
 import Control.Monad.Trans (lift)
 import Data.List (sort)
 import Data.Foldable (traverse_)
+import Control.Monad.State (put, get)
+import Parsing.Nodes (TyFields(TyFields))
 
 eVenv :: (SymbolTable t) => t EnvEntry
 eTenv :: (SymbolTable t) => t Ty
@@ -114,7 +116,44 @@ transLValue (N.ArrLV lvalue e) = do
     
 
 transChunk :: (SymbolTable t) => N.Chunk -> Analyser t ()
-transChunk = undefined
+transChunk (N.TypeChunk []) = return ()
+transChunk (N.TypeChunk ((N.TypeDecl (N.Id i) t):ts)) = do
+    ty <- transTy t
+    state <- get
+    put (state { currentTyEnv = insert (currentTyEnv state) i ty })
+    transChunk (N.TypeChunk ts)
+transChunk (N.FunChunk []) = return ()
+transChunk (N.FunChunk ((N.Function (N.Id fid) (TyFields params) maybeRetT body) : fs)) = do
+    (_, retT') <- transExpr body
+    state <- get
+    
+    case maybeRetT of
+        Just tid -> do
+            retT <- findTy "cannot find return type" tid
+            matchTwo "actual return type does not match provided" retT retT'
+        Nothing -> return ()
+    paramTys <- traverse (findTy "paramater type not found" . snd) params
+    put (state { currentEnv = insert (currentEnv state) fid (FunEntry paramTys retT') })
+transChunk (N.FunChunk ((N.Primitive (N.Id fid) (TyFields params) maybeRetT) : fs)) = do
+    state <- get
+    case maybeRetT of
+        Just tid -> do
+            retT <- findTy "cannot find return type" tid
+            paramTys <- traverse (findTy "paramater type not found" . snd) params
+            put (state { currentEnv = insert (currentEnv state) fid (FunEntry paramTys retT) })
+        Nothing -> lift (Left "unknown primitive")
+transChunk (N.VarChunk (N.VarDecl (N.Id i) maybeT e)) = do
+    (_, t) <- transExpr e
+    case maybeT of
+        Just tyId -> do
+            t' <- findTy "return type does not exist" tyId
+            matchTwo "inferred type does not match actual type" t t'
+        Nothing -> return ()
+    state <- get
+    put (state { currentEnv = insert (currentEnv state) i (VarEntry t) })
+
+
+transChunk (N.ImportChunk _) = lift (Left "you should not be importing...")
 
 transChunks :: (SymbolTable t) => [N.Chunk] -> Analyser t ()
 transChunks = traverse_ transChunk
