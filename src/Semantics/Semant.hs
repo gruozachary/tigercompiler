@@ -20,7 +20,15 @@ eTenv = fromList [("string", TString), ("int", TInt)]
 -- empty venv and tenv
 
 transTy :: (SymbolTable t) => N.Type -> Analyser t Ty
-transTy = undefined
+transTy (N.IdTy tyid) = findTy "type not found" tyid
+transTy (N.RecordTy (N.TyFields tyfields)) = do
+    let (is, tids) = unzip tyfields
+    tys <- traverse (findTy "could not find type") tids
+    TRecord (zip (map N.idToStr is) tys) <$> getNextId
+transTy (N.ArrayTy tyid) = do
+    ty <- findTy "could not find type" tyid
+    TArray ty <$> getNextId
+
 
 transExpr :: (SymbolTable t) => N.Expr -> Analyser t Expty
 transExpr N.NilEx = return ((), TNil)
