@@ -2,9 +2,9 @@ module Semantics.Analyser
     ( Ty(..), EnvEntry(..), Exp, Expty, Data(..), Error, Analyser
     , getNextId, matchTwo, expectInt, expectString, expectRecord, expectArray
     , expectNil, expectUnit, expectName, expectFun, expectJust
-    , findEnvEntry, findTy
+    , findEnvEntry, findTy, addType, addFun, addVar
     ) where
-import Control.Monad.State (StateT, gets, modify, MonadTrans (lift))
+import Control.Monad.State (StateT, gets, modify, lift, get, put)
 import qualified Parsing.Nodes as N
 import Semantics.SymbolTable
 
@@ -87,3 +87,18 @@ findTy :: (SymbolTable t) => Error -> N.TyId -> Analyser t Ty
 findTy e (N.TyId i) = do
     tenv <- gets currentTyEnv
     expectJust e (look tenv i)
+
+addType :: (SymbolTable t) => N.TyId -> Ty -> Analyser t ()
+addType (N.TyId i) t = do
+    state <- get
+    put (state { currentTyEnv = insert (currentTyEnv state) i t })
+
+addFun :: (SymbolTable t) => N.Id -> [Ty] -> Ty -> Analyser t ()
+addFun (N.Id i) as r = do
+    state <- get
+    put (state { currentEnv = insert (currentEnv state) i (FunEntry as r) })
+
+addVar :: (SymbolTable t) => N.Id -> Ty -> Analyser t ()
+addVar (N.Id i) t = do
+    state <- get
+    put (state { currentEnv = insert (currentEnv state) i (VarEntry t) })

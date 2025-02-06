@@ -1,5 +1,5 @@
 module Semantics.Semant
-    (
+    ( runSemant
     ) where
 
 import Semantics.SymbolTable
@@ -10,7 +10,7 @@ import Control.Monad (void)
 import Control.Monad.Trans (lift)
 import Data.List (sort)
 import Data.Foldable (traverse_)
-import Control.Monad.State (put, get)
+import Control.Monad.State (evalStateT)
 import Parsing.Nodes (TyFields(TyFields))
 
 eVenv :: (SymbolTable t) => t EnvEntry
@@ -125,15 +125,13 @@ transLValue (N.ArrLV lvalue e) = do
 
 transChunk :: (SymbolTable t) => N.Chunk -> Analyser t ()
 transChunk (N.TypeChunk []) = return ()
-transChunk (N.TypeChunk ((N.TypeDecl (N.Id i) t):ts)) = do
+transChunk (N.TypeChunk ((N.TypeDecl i t):ts)) = do
     ty <- transTy t
-    state <- get
-    put (state { currentTyEnv = insert (currentTyEnv state) i ty })
+    addType (N.idToTyId i) ty
     transChunk (N.TypeChunk ts)
 transChunk (N.FunChunk []) = return ()
-transChunk (N.FunChunk ((N.Function (N.Id fid) (TyFields params) maybeRetT body) : fs)) = do
+transChunk (N.FunChunk ((N.Function fid (TyFields params) maybeRetT body) : fs)) = do
     (_, retT') <- transExpr body
-    state <- get
     
     case maybeRetT of
         Just tid -> do
@@ -141,24 +139,24 @@ transChunk (N.FunChunk ((N.Function (N.Id fid) (TyFields params) maybeRetT body)
             matchTwo "actual return type does not match provided" retT retT'
         Nothing -> return ()
     paramTys <- traverse (findTy "paramater type not found" . snd) params
-    put (state { currentEnv = insert (currentEnv state) fid (FunEntry paramTys retT') })
-transChunk (N.FunChunk ((N.Primitive (N.Id fid) (TyFields params) maybeRetT) : fs)) = do
-    state <- get
+    addFun fid paramTys retT'
+    transChunk (N.FunChunk fs)
+transChunk (N.FunChunk ((N.Primitive fid (TyFields params) maybeRetT) : fs)) = do
     case maybeRetT of
         Just tid -> do
             retT <- findTy "cannot find return type" tid
             paramTys <- traverse (findTy "paramater type not found" . snd) params
-            put (state { currentEnv = insert (currentEnv state) fid (FunEntry paramTys retT) })
+            addFun fid paramTys retT
         Nothing -> lift (Left "unknown primitive")
-transChunk (N.VarChunk (N.VarDecl (N.Id i) maybeT e)) = do
+    transChunk (N.FunChunk fs)
+transChunk (N.VarChunk (N.VarDecl i maybeT e)) = do
     (_, t) <- transExpr e
     case maybeT of
         Just tyId -> do
             t' <- findTy "return type does not exist" tyId
             matchTwo "inferred type does not match actual type" t t'
         Nothing -> return ()
-    state <- get
-    put (state { currentEnv = insert (currentEnv state) i (VarEntry t) })
+    addVar i t
 
 
 transChunk (N.ImportChunk _) = lift (Left "you should not be importing...")
@@ -218,3 +216,9 @@ analyse :: (SymbolTable t) => N.Program -> Analyser t ()
 analyse (N.ExprProg e)       = void (transExpr e)
 analyse (N.ChunkProg [])     = return ()
 analyse (N.ChunkProg (c:cs)) = transChunk c >> analyse (N.ChunkProg cs)
+
+runSemant :: N.Program -> Either String ()
+runSemant p = evalStateT (analyse p) initialData
+    where initialData = Data { currentEnv   = eVenv :: MST EnvEntry
+                             , currentTyEnv = eTenv :: MST Ty
+                             , nextId       = 0                     }

@@ -1,6 +1,6 @@
 {-# LANGUAGE DeriveFunctor #-}
 module Semantics.SymbolTable
-    ( SymbolTable, new, insert, look, entries, add, fromList
+    ( SymbolTable, new, insert, look, entries, add, fromList, MST(..)
     ) where
 
 import qualified Data.Map as Map
