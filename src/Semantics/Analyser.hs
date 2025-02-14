@@ -53,51 +53,51 @@ matchTwo e t0 t1 f
     | t0 == t1  = f
     | otherwise = errFail e
 
-expectInt :: Error -> Analyser t Expty -> Ty -> Analyser t Expty
-expectInt _ f TInt = f
-expectInt e f _ = errFail e
+expectInt :: Error -> Ty -> Analyser t Expty -> Analyser t Expty
+expectInt _ TInt f = f
+expectInt e _ _ = errFail e
 
-expectString :: Error -> Analyser t Expty -> Ty -> Analyser t Expty
-expectString _ f TString = f
+expectString :: Error -> Ty -> Analyser t Expty -> Analyser t Expty
+expectString _ TString f = f
 expectString e _ _ = errFail e
 
-expectRecord :: Error -> ([(String, Ty)] -> Int -> Analyser t Expty) -> Ty -> Analyser t Expty
-expectRecord _ f (TRecord ps i) = f ps i
+expectRecord :: Error -> Ty -> ([(String, Ty)] -> Int -> Analyser t Expty) -> Analyser t Expty
+expectRecord _ (TRecord ps i) f = f ps i
 expectRecord e _ _ = errFail e
 
-expectArray :: Error -> (Ty -> Int -> Analyser t Expty) -> Ty -> Analyser t Expty
-expectArray _ f (TArray t i) = f t i
+expectArray :: Error -> Ty -> (Ty -> Int -> Analyser t Expty) -> Analyser t Expty
+expectArray _ (TArray t i) f = f t i
 expectArray e _ _ = errFail e
 
-expectNil :: Error -> Analyser t Expty -> Ty -> Analyser t Expty
-expectNil _ f TNil = f
+expectNil :: Error -> Ty -> Analyser t Expty -> Analyser t Expty
+expectNil _ TNil f = f
 expectNil e _ _ = errFail e
 
-expectUnit :: Error -> Analyser t Expty -> Ty -> Analyser t Expty
-expectUnit _ f TUnit = f
+expectUnit :: Error -> Ty -> Analyser t Expty -> Analyser t Expty
+expectUnit _ TUnit f = f
 expectUnit e _ _ = errFail e
 
-expectName :: Error -> (String -> Maybe Ty -> Analyser t Expty) -> Ty -> Analyser t Expty
-expectName _ f (TName s t) = f s t
+expectName :: Error -> Ty -> (String -> Maybe Ty -> Analyser t Expty) -> Analyser t Expty
+expectName _ (TName s t) f = f s t
 expectName e _ _ = errFail e
 
-expectFun :: Error -> ([Ty] -> Ty -> Analyser t Expty) -> EnvEntry -> Analyser t Expty
-expectFun _ f (FunEntry ts t) = f ts t
+expectFun :: Error -> EnvEntry -> ([Ty] -> Ty -> Analyser t Expty) -> Analyser t Expty
+expectFun _ (FunEntry ts t) f = f ts t
 expectFun e _ _ = errFail e
 
-expectJust :: Error -> (a -> Analyser t Expty) -> Maybe a -> Analyser t Expty
-expectJust _ f (Just x) = f x
+expectJust :: Error -> Maybe a -> (a -> Analyser t Expty) -> Analyser t Expty
+expectJust _ (Just x) f = f x
 expectJust e _ _ = errFail e
 
-findEnvEntry :: (SymbolTable t) => Error -> (EnvEntry -> Analyser t Expty) -> N.Id -> Analyser t Expty
-findEnvEntry e f (N.Id i) = do
+findEnvEntry :: (SymbolTable t) => Error -> N.Id -> (EnvEntry -> Analyser t Expty) -> Analyser t Expty
+findEnvEntry e (N.Id i) f = do
     Env venv _ <- ask
     case look venv i of
         Just x -> f x
         Nothing -> errFail e
 
-findTy :: (SymbolTable t) => Error -> (Ty -> Analyser t Expty) -> N.TyId -> Analyser t Expty
-findTy e f (N.TyId i) = do
+findTy :: (SymbolTable t) => Error -> N.TyId -> (Ty -> Analyser t Expty) -> Analyser t Expty
+findTy e (N.TyId i) f = do
     Env _ tenv <- ask
     case look tenv i of
         Just x -> f x
