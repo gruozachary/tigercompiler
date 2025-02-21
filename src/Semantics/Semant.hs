@@ -98,7 +98,7 @@ transExpr (N.ForEx _ ini ub bd) = do
             expectInt "for body must not return anything" bdT $
                 return ((), TUnit)
 transExpr N.BreakEx = return ((), TUnit)
-transExpr (N.LetEx cs []) = transChunks cs >> return ((), TUnit)
+transExpr (N.LetEx cs []) = transChunks cs $ return ((), TUnit)
 transExpr (N.LetEx cs bd) = transChunks cs >> transExpr (last bd)
 
 
@@ -123,14 +123,14 @@ transLValue (N.ArrLV lvalue e) = do
             return ((), elementT)
 
 
-transChunk :: (SymbolTable t) => N.Chunk -> Analyser t ()
-transChunk (N.TypeChunk []) = return ()
-transChunk (N.TypeChunk ((N.TypeDecl i t):ts)) = do
+transChunk :: (SymbolTable t) => N.Chunk -> Analyser t a -> Analyser t a
+transChunk (N.TypeChunk []) f = f
+transChunk (N.TypeChunk ((N.TypeDecl i t):ts)) f = do
     ty <- transTy t
     addType (N.idToTyId i) ty $
-        transChunk (N.TypeChunk ts)
-transChunk (N.FunChunk []) = return ()
-transChunk (N.FunChunk ((N.Function fid (TyFields params) maybeRetT body) : fs)) = do
+        transChunk (N.TypeChunk ts) f
+transChunk (N.FunChunk []) f = f
+transChunk (N.FunChunk ((N.Function fid (TyFields params) maybeRetT body) : fs)) f = do
     (_, retT') <- transExpr body
 
     case maybeRetT of
@@ -144,30 +144,30 @@ transChunk (N.FunChunk ((N.Function fid (TyFields params) maybeRetT body) : fs))
 
     -- TODO: might change with mutual recursion
     addFun fid (map snd paramTys) retT' $
-        transChunk (N.FunChunk fs)
-transChunk (N.FunChunk ((N.Primitive fid (TyFields params) maybeRetT) : fs)) = do
+        transChunk (N.FunChunk fs) f
+transChunk (N.FunChunk ((N.Primitive fid (TyFields params) maybeRetT) : fs)) f = do
     case maybeRetT of
-        Just tid -> void $ 
+        Just tid -> void $
             findTy "cannot find return type" tid $ \retT -> do
                 paramTys <- traverse (\(_, p) -> findTy "parameter type not found" p (\t -> return ((), t))) params
                 addFun fid (map snd paramTys) retT $
-                    transChunk (N.FunChunk fs)
+                    transChunk (N.FunChunk fs) f
                 return ((), TUnknown)
         Nothing -> err "unknown primitive"
-transChunk (N.VarChunk (N.VarDecl i maybeT e)) = do
+transChunk (N.VarChunk (N.VarDecl i maybeT e)) f = do
     (_, t) <- transExpr e
     case maybeT of
         Just tyId -> void $
             findTy "return type does not exist" tyId $ \t' ->
                 matchTwo "inferred type does not match actual type" t t' $
-                    addVar i t
+                    addVar i t $ f >> return ((), TUnknown)
         Nothing -> return ()
 
 
-transChunk (N.ImportChunk _) = err "you should not be importing..."
+transChunk (N.ImportChunk _) floor = err "you should not be importing..."
 
-transChunks :: (SymbolTable t) => [N.Chunk] -> Analyser t ()
-transChunks = traverse_ transChunk
+transChunks :: (SymbolTable t) => [N.Chunk] -> Analyser t a -> Analyser t a
+transChunks cs f = foldr transChunk f cs
 
 transOp :: N.Op -> Expty -> Expty -> Analyser t Expty
 transOp N.AddOp (_, lt) (_, rt) = do
