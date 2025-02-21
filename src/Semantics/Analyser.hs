@@ -3,6 +3,7 @@ module Semantics.Analyser
     , getNextId, matchTwo, expectInt, expectString, expectRecord, expectArray
     , expectNil, expectUnit, expectName, expectFun, expectJust
     , findEnvEntry, findTy, addType, addFun, addVar
+    , err, errFail
     ) where
 import qualified Parsing.Nodes as N
 import Semantics.SymbolTable
