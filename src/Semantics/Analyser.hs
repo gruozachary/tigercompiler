@@ -1,9 +1,9 @@
 module Semantics.Analyser
     ( Ty(..), EnvEntry(..), Exp, Expty, Data(..), Error, Analyser
     , getNextId, matchTwo, expectInt, expectString, expectRecord, expectArray
-    , expectNil, expectUnit, expectName, expectFun, expectJust
+    , expectNil, expectUnit, expectName, expectFun
     , findEnvEntry, findTy, addType, addFun, addVar
-    , err, errFail
+    , err, erf
     ) where
 import qualified Parsing.Nodes as N
 import Semantics.SymbolTable
@@ -40,8 +40,8 @@ type Analyser t a = RWS (Env t) [Error] Data a -- TODO: difference list
 err :: Error -> Analyser t ()
 err e = tell [e]
 
-errFail :: Error -> Analyser t Expty
-errFail e = err e >> pure ((), TUnknown)
+erf :: Error -> Analyser t Expty
+erf e = err e >> pure ((), TUnknown)
 
 getNextId :: Analyser t Int
 getNextId = do
@@ -49,60 +49,54 @@ getNextId = do
     modify (\s -> s { nextId = i + 1 })
     pure i
 
-matchTwo :: (Eq a) => Error -> a -> a -> Analyser t Expty -> Analyser t Expty
-matchTwo e t0 t1 f
-    | t0 == t1  = f
-    | otherwise = errFail e
+matchTwo :: (Eq a) => a -> a -> Analyser t b -> Analyser t b -> Analyser t b
+matchTwo t0 t1 fl su
+    | t0 == t1  = su
+    | otherwise = fl
 
-expectInt :: Error -> Ty -> Analyser t Expty -> Analyser t Expty
-expectInt _ TInt f = f
-expectInt e _ _ = errFail e
+expectInt :: Ty -> Analyser t a -> Analyser t a -> Analyser t a
+expectInt TInt _  su = su
+expectInt _    fl _  = fl
 
-expectString :: Error -> Ty -> Analyser t Expty -> Analyser t Expty
-expectString _ TString f = f
-expectString e _ _ = errFail e
+expectString :: Ty -> Analyser t a -> Analyser t a -> Analyser t a
+expectString TString _  su = su
+expectString _       fl _  = fl
 
-expectRecord :: Error -> Ty -> ([(String, Ty)] -> Int -> Analyser t Expty) -> Analyser t Expty
-expectRecord _ (TRecord ps i) f = f ps i
-expectRecord e _ _ = errFail e
+expectRecord :: Ty -> Analyser t a -> ([(String, Ty)] -> Int -> Analyser t a) -> Analyser t a
+expectRecord (TRecord ps i) _  su = su ps i
+expectRecord _              fl _  = fl
 
-expectArray :: Error -> Ty -> (Ty -> Int -> Analyser t Expty) -> Analyser t Expty
-expectArray _ (TArray t i) f = f t i
-expectArray e _ _ = errFail e
+expectArray :: Ty -> Analyser t a -> (Ty -> Int -> Analyser t a) -> Analyser t a
+expectArray (TArray t i) _  su = su t i
+expectArray _            fl _  = fl
 
-expectNil :: Error -> Ty -> Analyser t Expty -> Analyser t Expty
-expectNil _ TNil f = f
-expectNil e _ _ = errFail e
+expectNil :: Ty -> Analyser t a -> Analyser t a -> Analyser t a
+expectNil TNil _  su = su
+expectNil _    fl _  = fl
 
-expectUnit :: Error -> Ty -> Analyser t Expty -> Analyser t Expty
-expectUnit _ TUnit f = f
-expectUnit e _ _ = errFail e
+expectUnit :: Ty -> Analyser t a -> Analyser t a -> Analyser t a
+expectUnit TUnit _  su = su
+expectUnit _     fl _  = fl
 
-expectName :: Error -> Ty -> (String -> Maybe Ty -> Analyser t Expty) -> Analyser t Expty
-expectName _ (TName s t) f = f s t
-expectName e _ _ = errFail e
+expectName :: Ty -> Analyser t a -> (String -> Maybe Ty -> Analyser t a) -> Analyser t a
+expectName (TName s t) _  su = su s t
+expectName _           fl _  = fl
 
-expectFun :: Error -> EnvEntry -> ([Ty] -> Ty -> Analyser t Expty) -> Analyser t Expty
-expectFun _ (FunEntry ts t) f = f ts t
-expectFun e _ _ = errFail e
-
-expectJust :: Error -> Maybe a -> (a -> Analyser t Expty) -> Analyser t Expty
-expectJust _ (Just x) f = f x
-expectJust e _ _ = errFail e
+expectFun :: EnvEntry -> Analyser t a -> ([Ty] -> Ty -> Analyser t a) -> Analyser t a
+expectFun (FunEntry ts t) _  su = su ts t
+expectFun _               fl _  = fl
 
 findEnvEntry :: (SymbolTable t) => Error -> N.Id -> (EnvEntry -> Analyser t Expty) -> Analyser t Expty
 findEnvEntry e (N.Id i) f = do
     Env venv _ <- ask
     case look venv i of
         Just x -> f x
-        Nothing -> errFail e
+        Nothing -> erf e
 
-findTy :: (SymbolTable t) => Error -> N.TyId -> (Ty -> Analyser t Expty) -> Analyser t Expty
-findTy e (N.TyId i) f = do
+findTy :: (SymbolTable t) => N.TyId -> Analyser t a -> (Ty -> Analyser t a) -> Analyser t a
+findTy (N.TyId i) fl su = do
     Env _ tenv <- ask
-    case look tenv i of
-        Just x -> f x
-        Nothing -> errFail e
+    maybe fl su (look tenv i)
 
 addType :: (SymbolTable t) => N.TyId -> Ty -> Analyser t a -> Analyser t a
 addType (N.TyId i) t = local (\(Env venv tenv) -> Env venv (insert tenv i t))
