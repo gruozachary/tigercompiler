@@ -37,12 +37,10 @@ transExpr (N.ArrayEx tid sizeExpr element) = do
     findTy tid (erf "type of array is not defined") $ \t -> do
         expectArray t (erf "can't treat non-array as array") $ \ets _ -> do
             (_, sizeT) <- transExpr sizeExpr
-            case sizeT of
-                TInt -> return ()
-                _ -> err "size of array is not an integer"
-            (_, ets') <- transExpr element
-            matchTwo ets ets' (erf "array type does not match element initialiser") $
-                return ((), t)
+            expectInt sizeT (erf "size of array is not an integer") $ do
+                (_, ets') <- transExpr element
+                matchTwo ets ets' (erf "array type does not match element initialiser") $
+                    return ((), t)
 transExpr (N.RecordEx tid ents) = do
     findTy tid (erf "type undefined") $ \t -> do
         expectRecord t (erf "type is not a record") $ \recordElem _ -> do
@@ -90,14 +88,15 @@ transExpr (N.WhileEx p bd) = do
         (_, bdT) <- transExpr bd
         expectUnit bdT (erf "body of while can't return a value") $
             return ((), TUnit)
-transExpr (N.ForEx _ ini ub bd) = do
+transExpr (N.ForEx iterator ini ub bd) = do
     (_, iniT) <- transExpr ini
     expectInt iniT (erf "initialiser must be integer") $ do
         (_, ubT) <- transExpr ub
         expectInt ubT (erf "upper bound must be integer") $ do
-            (_, bdT) <- transExpr bd
-            expectInt bdT (erf "for body must not return anything") $
-                return ((), TUnit)
+            addVar iterator TInt $ do
+                (_, bdT) <- transExpr bd
+                expectUnit bdT (erf "for body must not return anything") $
+                    return ((), TUnit)
 transExpr N.BreakEx = return ((), TUnit)
 transExpr (N.LetEx cs []) = transChunks cs $ return ((), TUnit)
 transExpr (N.LetEx cs bd) = transChunks cs (transExpr (N.Exs bd))
