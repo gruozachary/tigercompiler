@@ -86,12 +86,10 @@ expectFun :: EnvEntry -> Analyser t a -> ([Ty] -> Ty -> Analyser t a) -> Analyse
 expectFun (FunEntry ts t) _  su = su ts t
 expectFun _               fl _  = fl
 
-findEnvEntry :: (SymbolTable t) => Error -> N.Id -> (EnvEntry -> Analyser t Expty) -> Analyser t Expty
-findEnvEntry e (N.Id i) f = do
+findEnvEntry :: (SymbolTable t) => N.Id -> Analyser t a -> (EnvEntry -> Analyser t a) -> Analyser t a
+findEnvEntry (N.Id i) fl su = do
     Env venv _ <- ask
-    case look venv i of
-        Just x -> f x
-        Nothing -> erf e
+    maybe fl su (look venv i)
 
 findTy :: (SymbolTable t) => N.TyId -> Analyser t a -> (Ty -> Analyser t a) -> Analyser t a
 findTy (N.TyId i) fl su = do

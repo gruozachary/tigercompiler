@@ -18,6 +18,6 @@ main = do
 
     case runSemant p of
         [] -> putStrLn "program type checks!"
-        es -> traverse_ fail es
+        es -> traverse_ print es >> fail "semantic check failed !"
     
     print p

@@ -10,6 +10,7 @@ import Control.Monad (void)
 import Data.List (sort)
 import Parsing.Nodes (TyFields(TyFields))
 import Control.Monad.RWS (runRWS)
+import Data.Foldable(traverse_)
 
 eVenv :: (SymbolTable t) => t EnvEntry
 eTenv :: (SymbolTable t) => t Ty
@@ -51,7 +52,7 @@ transExpr (N.RecordEx tid ents) = do
                 return ((), t)
 transExpr (N.LValEx lv) = transLValue lv
 transExpr (N.FunCallEx fid args) = do
-    findEnvEntry "function undefined" fid $ \f -> do
+    findEnvEntry fid (erf "function not found") $ \f -> do
             expectFun f (erf "cannot call non functions") $ \argTs retT -> do
                 argTs' <- map snd <$> traverse transExpr args
                 matchTwo argTs argTs' (erf "function arguments are not of expected type") $
@@ -64,7 +65,7 @@ transExpr (N.OpEx e1 op e2) = do
     l <- transExpr e1
     r <- transExpr e2
     transOp op l r
-transExpr (N.Exs es) = transExpr (last es) -- es will never be empty
+transExpr (N.Exs es) = traverse_ transExpr (init es) >> transExpr (last es)--  transExpr (last es) -- es will never be empty
 transExpr (N.AssignEx lv e) = do
     (_, lvT) <- transLValue lv
     (_, eT)  <- transExpr e
@@ -98,12 +99,12 @@ transExpr (N.ForEx _ ini ub bd) = do
                 return ((), TUnit)
 transExpr N.BreakEx = return ((), TUnit)
 transExpr (N.LetEx cs []) = transChunks cs $ return ((), TUnit)
-transExpr (N.LetEx cs bd) = transChunks cs (transExpr (last bd))
+transExpr (N.LetEx cs bd) = transChunks cs (transExpr (N.Exs bd))
 
 
 transLValue :: (SymbolTable t) => N.LValue -> Analyser t Expty
 transLValue (N.IdLV i) = do
-    findEnvEntry "variable not found" i $ \envEntry ->
+    findEnvEntry i (erf "variable not found") $ \envEntry ->
         case envEntry of
             (VarEntry t) -> return ((), t)
             _ -> erf "cannot modify a function"
@@ -111,7 +112,7 @@ transLValue (N.RecLV lvalue (N.Id i)) = do
     (_, recordT) <- transLValue lvalue
     expectRecord recordT (erf "cannot get member from a non-record") $ \pairs _ ->
         case lookup i pairs of
-            Nothing -> erf "cannot get members of nothing"
+            Nothing -> erf "member does not exist in record"
             Just ty -> return ((), ty)
 
 transLValue (N.ArrLV lvalue e) = do
