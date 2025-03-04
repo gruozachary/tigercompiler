@@ -33,12 +33,13 @@ transExpr :: (SymbolTable t) => N.Expr -> Analyser t Expty
 transExpr N.NilEx = return ((), TNil)
 transExpr (N.IntEx _) = return ((), TInt)
 transExpr (N.StrEx _) = return ((), TString)
-transExpr (N.ArrayEx tid size element) = do
+transExpr (N.ArrayEx tid sizeExpr element) = do
     findTy tid (erf "type of array is not defined") $ \t -> do
         expectArray t (erf "can't treat non-array as array") $ \ets _ -> do
-            case size of
-                N.IntEx _ -> return ()
-                _ -> err "size of array is not an integer literal"
+            (_, sizeT) <- transExpr sizeExpr
+            case sizeT of
+                TInt -> return ()
+                _ -> err "size of array is not an integer"
             (_, ets') <- transExpr element
             matchTwo ets ets' (erf "array type does not match element initialiser") $
                 return ((), t)
