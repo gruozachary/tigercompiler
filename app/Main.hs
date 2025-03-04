@@ -1,5 +1,7 @@
 module Main (main) where
 
+import Data.Foldable (traverse_)
+
 import Lexing.Lexer
 import Parsing.Parser
 import Semantics.Semant
@@ -12,10 +14,10 @@ main = do
 
     p <- case runAlex c parse of
         Right p -> pure p
-        Left  e -> ioError (userError e)
+        Left  e -> fail e
 
     case runSemant p of
-        Right _ -> putStrLn "program type checks!"
-        Left  e -> ioError (userError e)
+        [] -> putStrLn "program type checks!"
+        es -> traverse_ fail es
     
     print p

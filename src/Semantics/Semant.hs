@@ -8,7 +8,6 @@ import qualified Parsing.Nodes as N
 import Semantics.Analyser
 import Control.Monad (void)
 import Data.List (sort)
-import Data.Foldable (traverse_)
 import Parsing.Nodes (TyFields(TyFields))
 import Control.Monad.RWS (runRWS)
 
@@ -19,13 +18,13 @@ eTenv = fromList [("string", TString), ("int", TInt)]
 -- empty venv and tenv
 
 transTy :: (SymbolTable t) => N.Type -> Analyser t Ty
-transTy (N.IdTy tyid) = snd <$> findTy "type not found" tyid (\t -> return ((), t))
+transTy (N.IdTy tyid) = snd <$> findTy tyid (erf "type not found") (\t -> return ((), t))
 transTy (N.RecordTy (N.TyFields tyfields)) = do
     let (is, tids) = unzip tyfields
-    tys <- traverse (\tid -> snd <$> findTy "could not find type" tid (\t -> return ((), t))) tids
+    tys <- traverse (\tid -> snd <$> findTy  tid (erf "could not find type") (\t -> return ((), t))) tids
     TRecord (zip (map N.idToStr is) tys) <$> getNextId
 transTy (N.ArrayTy tyid) = do
-    (_, ty) <- findTy "could not find type" tyid $ \ty -> return ((), ty)
+    (_, ty) <- findTy tyid (erf "could not find type") $ \ty -> return ((), ty)
     TArray ty <$> getNextId
 
 
@@ -34,32 +33,32 @@ transExpr N.NilEx = return ((), TNil)
 transExpr (N.IntEx _) = return ((), TInt)
 transExpr (N.StrEx _) = return ((), TString)
 transExpr (N.ArrayEx tid size element) = do
-    findTy "type of array is not defined" tid $ \t -> do
-        expectArray "can't treat non-array as array" t $ \ets _ -> do
+    findTy tid (erf "type of array is not defined") $ \t -> do
+        expectArray t (erf "can't treat non-array as array") $ \ets _ -> do
             case size of
                 N.IntEx _ -> return ()
                 _ -> err "size of array is not an integer literal"
             (_, ets') <- transExpr element
-            matchTwo "array type does not match element initialiser" ets ets' $
+            matchTwo ets ets' (erf "array type does not match element initialiser") $
                 return ((), t)
 transExpr (N.RecordEx tid ents) = do
-    findTy "type undefined" tid $ \t -> do
-        expectRecord "type is not a record" t $ \recordElem _ -> do
+    findTy tid (erf "type undefined") $ \t -> do
+        expectRecord t (erf "type is not a record") $ \recordElem _ -> do
             let stmap = sort recordElem
             let (is, es) = unzip ents
             es' <- sort . zip (map N.idToStr is) . map snd <$> traverse transExpr es
-            matchTwo "record fields invalid" stmap es' $
+            matchTwo stmap es' (erf "record fields invalid") $
                 return ((), t)
 transExpr (N.LValEx lv) = transLValue lv
 transExpr (N.FunCallEx fid args) = do
     findEnvEntry "function undefined" fid $ \f -> do
-            expectFun "cannot call non functions" f $ \argTs retT -> do
+            expectFun f (erf "cannot call non functions") $ \argTs retT -> do
                 argTs' <- map snd <$> traverse transExpr args
-                matchTwo "function arguments are not of expected type" argTs argTs' $
+                matchTwo argTs argTs' (erf "function arguments are not of expected type") $
                     return ((), retT)
 transExpr (N.NegEx e) = do
     (_, t) <- transExpr e
-    expectInt "cannot negate non integers" t $
+    expectInt t (erf "cannot negate non integers") $
         return ((), t)
 transExpr (N.OpEx e1 op e2) = do
     l <- transExpr e1
@@ -69,37 +68,37 @@ transExpr (N.Exs es) = transExpr (last es) -- es will never be empty
 transExpr (N.AssignEx lv e) = do
     (_, lvT) <- transLValue lv
     (_, eT)  <- transExpr e
-    matchTwo "value of RHS does not match LHS" eT lvT $
+    matchTwo eT lvT (erf "value of RHS does not match LHS") $
         return ((), TUnit)
 transExpr (N.IfEx p b1 mb2) = do
     (_, pT) <- transExpr p
-    expectInt "can only calculate truthiness of integers" pT $ do
+    expectInt pT (erf "can only calculate truthiness of integers") $ do
         (_, t1) <- transExpr b1
         case mb2 of
             Just b2 -> do
                 (_, t2) <- transExpr b2
-                matchTwo "both branches of an if must produce the same type" t1 t2 $
+                matchTwo t1 t2 (erf "both branches of an if must produce the same type") $
                     return ((), t1)
             Nothing -> do
-                expectUnit "type of if must be unit" t1 $
+                expectUnit t1 (erf "type of if must be unit") $
                     return ((), TUnit)
 transExpr (N.WhileEx p bd) = do
     (_, pT) <- transExpr p
-    expectInt "can only calculate truthiness of integers" pT $ do
+    expectInt pT (erf "can only calculate truthiness of integers") $ do
         (_, bdT) <- transExpr bd
-        expectUnit "body of while can't return a value" bdT $
+        expectUnit bdT (erf "body of while can't return a value") $
             return ((), TUnit)
 transExpr (N.ForEx _ ini ub bd) = do
     (_, iniT) <- transExpr ini
-    expectInt "initialiser must be integer" iniT $ do
+    expectInt iniT (erf "initialiser must be integer") $ do
         (_, ubT) <- transExpr ub
-        expectInt "upper bound must be integer" ubT $ do
+        expectInt ubT (erf "upper bound must be integer") $ do
             (_, bdT) <- transExpr bd
-            expectInt "for body must not return anything" bdT $
+            expectInt bdT (erf "for body must not return anything") $
                 return ((), TUnit)
 transExpr N.BreakEx = return ((), TUnit)
 transExpr (N.LetEx cs []) = transChunks cs $ return ((), TUnit)
-transExpr (N.LetEx cs bd) = transChunks cs >> transExpr (last bd)
+transExpr (N.LetEx cs bd) = transChunks cs (transExpr (last bd))
 
 
 transLValue :: (SymbolTable t) => N.LValue -> Analyser t Expty
@@ -107,19 +106,19 @@ transLValue (N.IdLV i) = do
     findEnvEntry "variable not found" i $ \envEntry ->
         case envEntry of
             (VarEntry t) -> return ((), t)
-            _ -> errFail "cannot modify a function"
+            _ -> erf "cannot modify a function"
 transLValue (N.RecLV lvalue (N.Id i)) = do
     (_, recordT) <- transLValue lvalue
-    expectRecord "cannot get member from a non-record" recordT $ \pairs _ ->
+    expectRecord recordT (erf "cannot get member from a non-record") $ \pairs _ ->
         case lookup i pairs of
-            Nothing -> errFail "cannot get members of nothing"
+            Nothing -> erf "cannot get members of nothing"
             Just ty -> return ((), ty)
 
 transLValue (N.ArrLV lvalue e) = do
     (_, arrayT) <- transLValue lvalue
-    expectArray "cannot index a non-array" arrayT $ \elementT _ -> do
+    expectArray arrayT (erf "cannot index a non-array") $ \elementT _ -> do
         (_, eT) <- transExpr e
-        expectInt "array index must be an integer" eT $
+        expectInt eT (erf "array index must be an integer") $
             return ((), elementT)
 
 
@@ -135,96 +134,94 @@ transChunk (N.FunChunk ((N.Function fid (TyFields params) maybeRetT body) : fs))
 
     case maybeRetT of
         Just tid -> do
-            findTy "cannot find return type" tid $ \retT -> do
-                matchTwo "actual return type does not match provided" retT retT' $
-                    return ((), TUnknown)
-        Nothing -> return ((), TUnknown)
+            findTy tid (err "cannot find return type") $ \retT ->
+                matchTwo retT retT' (err "actual return type does not match provided") $ return ()
+        Nothing -> return ()
 
-    paramTys <- traverse (\(_, p) -> findTy "parameter type not found" p (\t -> return ((), t))) params
+    paramTys <- traverse (\(_, p) -> findTy p (snd <$> erf "parameter type not found") return) params
 
     -- TODO: might change with mutual recursion
-    addFun fid (map snd paramTys) retT' $
+    addFun fid paramTys retT' $
         transChunk (N.FunChunk fs) f
 transChunk (N.FunChunk ((N.Primitive fid (TyFields params) maybeRetT) : fs)) f = do
     case maybeRetT of
-        Just tid -> void $
-            findTy "cannot find return type" tid $ \retT -> do
-                paramTys <- traverse (\(_, p) -> findTy "parameter type not found" p (\t -> return ((), t))) params
-                addFun fid (map snd paramTys) retT $
-                    transChunk (N.FunChunk fs) f
-                return ((), TUnknown)
-        Nothing -> err "unknown primitive"
+        Just tid -> findTy tid (err "cannot find return type" >> f) $ \retT -> do
+            paramTys <- traverse (\(_, p) -> findTy p (snd <$> erf "parameter type not found") return) params
+            addFun fid paramTys retT $
+                transChunk (N.FunChunk fs) f
+        Nothing -> err "unknown primitive" >> f
 transChunk (N.VarChunk (N.VarDecl i maybeT e)) f = do
     (_, t) <- transExpr e
     case maybeT of
-        Just tyId -> void $
-            findTy "return type does not exist" tyId $ \t' ->
-                matchTwo "inferred type does not match actual type" t t' $
-                    addVar i t $ f >> return ((), TUnknown)
-        Nothing -> return ()
+        Just tyId -> do
+            findTy tyId (err "return type does not exist" >> f) $ \t' -> do
+                matchTwo t t' (err "inferred type does not match actual type" >> f) $
+                    addVar i t f
+        Nothing -> addVar i t f
 
 
-transChunk (N.ImportChunk _) floor = err "you should not be importing..."
+transChunk (N.ImportChunk _) f = err "you should not be importing..." >> f
 
 transChunks :: (SymbolTable t) => [N.Chunk] -> Analyser t a -> Analyser t a
 transChunks cs f = foldr transChunk f cs
 
 transOp :: N.Op -> Expty -> Expty -> Analyser t Expty
 transOp N.AddOp (_, lt) (_, rt) = do
-    expectInt "cannot add non-integers" lt $
-        expectInt "cannot add non-integers" rt $
+    expectInt lt (erf "cannot add non-integers") $
+        expectInt rt (erf "cannot add non-integers") $
             return ((), TInt)
 transOp N.SubOp (_, lt) (_, rt) = do
-    expectInt "cannot subtract non-integers" lt $
-        expectInt "cannot subtract non-integers" rt $
+    expectInt lt (erf "cannot subtract non-integers") $
+        expectInt rt (erf "cannot subtract non-integers") $
             return ((), TInt)
 transOp N.MultOp (_, lt) (_, rt) = do
-    expectInt "cannot multiply non-integers" lt $
-        expectInt "cannot multiply non-integers" rt $
+    expectInt lt (erf "cannot multiply non-integers") $
+        expectInt rt (erf "cannot multiply non-integers") $
             return ((), TInt)
 transOp N.DivOp (_, lt) (_, rt) = do
-    expectInt "cannot divide non-integers" lt $
-        expectInt "cannot divide non-integers" rt $
+    expectInt lt (erf "cannot divide non-integers") $
+        expectInt rt (erf "cannot divide non-integers") $
             return ((), TInt)
 transOp N.EqOp (_, lt) (_, rt) = do
-    matchTwo "cannot check for equality on different types" lt rt $
+    matchTwo lt rt (erf "cannot check for equality on different types") $
         return ((), TInt)
 transOp N.NeqOp (_, lt) (_, rt) = do
-    matchTwo "cannot check for inequality on different types" lt rt $
+    matchTwo lt rt (erf "cannot check for inequality on different types") $
         return ((), TInt)
 transOp N.LtOp (_, lt) (_, rt) = do
-    expectInt "cannot compare non-integers" lt $
-        expectInt "cannot compare non-integers" rt $
+    expectInt lt (erf "cannot compare non-integers") $
+        expectInt rt (erf "cannot compare non-integers") $
             return ((), TInt)
 transOp N.LeOp (_, lt) (_, rt) = do
-    expectInt "cannot compare non-integers" lt $
-        expectInt "cannot compare non-integers" rt $
+    expectInt lt (erf "cannot compare non-integers") $
+        expectInt rt (erf "cannot compare non-integers") $
             return ((), TInt)
 transOp N.GtOp (_, lt) (_, rt) = do
-    expectInt "cannot compare non-integers" lt $
-        expectInt "cannot compare non-integers" rt $
+    expectInt lt (erf "cannot compare non-integers") $
+        expectInt rt (erf "cannot compare non-integers") $
             return ((), TInt)
 transOp N.GeOp (_, lt) (_, rt) = do
-    expectInt "cannot compare non-integers" lt $
-        expectInt "cannot compare non-integers" rt $
+    expectInt lt (erf "cannot compare non-integers") $
+        expectInt rt (erf "cannot compare non-integers") $
             return ((), TInt)
 transOp N.AndOp (_, lt) (_, rt) = do
-    expectInt "cannot AND non-integers" lt $
-        expectInt "cannot AND non-integers" rt $
+    expectInt lt (erf "cannot AND non-integers") $
+        expectInt rt (erf "cannot AND non-integers") $
             return ((), TInt)
 transOp N.OrOp (_, lt) (_, rt) = do
-    expectInt "cannot OR non-integers" lt $
-        expectInt "cannot OR non-integers" rt $
+    expectInt lt (erf "cannot OR non-integers") $
+        expectInt rt (erf "cannot OR non-integers") $
             return ((), TInt)
 
 analyse :: (SymbolTable t) => N.Program -> Analyser t ()
 analyse (N.ExprProg e)       = void (transExpr e)
 analyse (N.ChunkProg [])     = return ()
-analyse (N.ChunkProg (c:cs)) = transChunk c >> analyse (N.ChunkProg cs)
+analyse (N.ChunkProg (c:cs)) = transChunk c (analyse (N.ChunkProg cs))
 
-runSemant :: N.Program -> Either String ()
+runSemant :: N.Program -> [String]
 -- runSemant p = evalStateT (analyse p) initialData
 --     where initialData = Data { currentEnv   = eVenv :: MST EnvEntry
 --                              , currentTyEnv = eTenv :: MST Ty
 --                              , nextId       = 0                     }
-runSemant = runRWS
+runSemant p = w
+    where (_, _, w) = runRWS (analyse p) (Env (eVenv :: MST EnvEntry) (eTenv :: MST Ty)) (Data { nextId = 0 })

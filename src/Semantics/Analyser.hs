@@ -1,5 +1,5 @@
 module Semantics.Analyser
-    ( Ty(..), EnvEntry(..), Exp, Expty, Data(..), Error, Analyser
+    ( Ty(..), EnvEntry(..), Exp, Expty, Data(..), Error, Analyser, Env(..)
     , getNextId, matchTwo, expectInt, expectString, expectRecord, expectArray
     , expectNil, expectUnit, expectName, expectFun
     , findEnvEntry, findTy, addType, addFun, addVar
