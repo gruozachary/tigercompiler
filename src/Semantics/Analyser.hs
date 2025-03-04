@@ -106,4 +106,4 @@ addVar :: (SymbolTable t) => N.Id -> Ty -> Analyser t a -> Analyser t a
 addVar (N.Id i) t = local (\(Env venv tenv) -> Env (insert venv i (VarEntry t)) tenv)
 
 addVars :: (SymbolTable t) => [(N.Id, Ty)] -> Analyser t a -> Analyser t a
-addVars = undefined
+addVars = foldr (\(i, t) k -> k . addVar i t) id
