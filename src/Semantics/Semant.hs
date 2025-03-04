@@ -159,7 +159,7 @@ transChunk (N.FunChunk ((N.Primitive fid (TyFields params) maybeRetT) : fs)) f =
             Just tid -> do
                 findTy tid (err "cannot find return type" >> f) $ \retT ->
                     addFun fid paramTys retT $ transChunk (N.FunChunk fs) f
-            Nothing -> err "unknown primitive" >> f
+            Nothing -> err "unknown primitive" >> transChunk (N.FunChunk fs) f
 transChunk (N.VarChunk (N.VarDecl i maybeT e)) f = do
     (_, t) <- transExpr e
     case maybeT of
