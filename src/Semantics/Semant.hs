@@ -151,12 +151,14 @@ transChunk (N.FunChunk ((N.Function fid (TyFields params) maybeRetT body) : fs))
 
     -- TODO: might change with mutual recursion
 transChunk (N.FunChunk ((N.Primitive fid (TyFields params) maybeRetT) : fs)) f = do
-    case maybeRetT of
-        Just tid -> findTy tid (err "cannot find return type" >> f) $ \retT -> do
-            paramTys <- traverse (\(_, p) -> findTy p (snd <$> erf "parameter type not found") return) params
-            addFun fid paramTys retT $
-                transChunk (N.FunChunk fs) f
-        Nothing -> err "unknown primitive" >> f
+    paramTys <- traverse (\(_, p) -> findTy p (snd <$> erf "parameter type not found") return) params
+    let paramsWithTys = map fst params `zip` paramTys
+    addVars paramsWithTys $ do
+        case maybeRetT of
+            Just tid -> do
+                findTy tid (err "cannot find return type" >> f) $ \retT ->
+                    addFun fid paramTys retT $ transChunk (N.FunChunk fs) f
+            Nothing -> err "unknown primitive" >> transChunk (N.FunChunk fs) f
 transChunk (N.VarChunk (N.VarDecl i maybeT e)) f = do
     (_, t) <- transExpr e
     case maybeT of
