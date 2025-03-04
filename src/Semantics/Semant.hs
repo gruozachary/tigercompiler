@@ -14,7 +14,22 @@ import Data.Foldable(traverse_)
 
 eVenv :: (SymbolTable t) => t EnvEntry
 eTenv :: (SymbolTable t) => t Ty
-eVenv = new
+eVenv = fromList
+    [ ("chr", FunEntry [TInt] TString)
+    , ("concat", FunEntry [TString, TString] TString)
+    , ("exit", FunEntry [TInt] TUnit)
+    , ("flush", FunEntry [] TUnit)
+    , ("getchar", FunEntry [] TString)
+    , ("not", FunEntry [TInt] TInt)
+    , ("ord", FunEntry [TString] TInt)
+    , ("print", FunEntry [TString] TUnit)
+    , ("print_err", FunEntry [TString] TUnit)
+    , ("print_int", FunEntry [TInt] TUnit)
+    , ("size", FunEntry [TString] TInt)
+    , ("strcmp", FunEntry [TString, TString] TInt)
+    , ("streq", FunEntry [TString, TString] TInt)
+    , ("substring", FunEntry [TString, TInt, TInt] TString) ]
+    
 eTenv = fromList [("string", TString), ("int", TInt)]
 -- empty venv and tenv
 
