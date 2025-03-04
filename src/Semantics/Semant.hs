@@ -131,19 +131,25 @@ transChunk (N.TypeChunk ((N.TypeDecl i t):ts)) f = do
         transChunk (N.TypeChunk ts) f
 transChunk (N.FunChunk []) f = f
 transChunk (N.FunChunk ((N.Function fid (TyFields params) maybeRetT body) : fs)) f = do
-    (_, retT') <- transExpr body
-
-    case maybeRetT of
-        Just tid -> do
-            findTy tid (err "cannot find return type") $ \retT ->
-                matchTwo retT retT' (err "actual return type does not match provided") $ return ()
-        Nothing -> return ()
-
     paramTys <- traverse (\(_, p) -> findTy p (snd <$> erf "parameter type not found") return) params
+    let paramsWithTys = map fst params `zip` paramTys
+    addVars paramsWithTys $ do
+
+        case maybeRetT of
+            Just tid -> do
+                findTy tid (err "cannot find return type" >> f) $ \retT ->
+                    addFun fid paramTys retT $ do
+                        (_, retT') <- transExpr body
+                        matchTwo retT retT' (err "actual return type does not match provided" >> f) $
+                            transChunk (N.FunChunk fs) f
+            Nothing -> 
+                addFun fid paramTys TUnknown $ do
+                    (_, retT') <- transExpr body
+                    addFun fid paramTys retT' $
+                        transChunk (N.FunChunk fs) f
+
 
     -- TODO: might change with mutual recursion
-    addFun fid paramTys retT' $
-        transChunk (N.FunChunk fs) f
 transChunk (N.FunChunk ((N.Primitive fid (TyFields params) maybeRetT) : fs)) f = do
     case maybeRetT of
         Just tid -> findTy tid (err "cannot find return type" >> f) $ \retT -> do

@@ -2,7 +2,7 @@ module Semantics.Analyser
     ( Ty(..), EnvEntry(..), Exp, Expty, Data(..), Error, Analyser, Env(..)
     , getNextId, matchTwo, expectInt, expectString, expectRecord, expectArray
     , expectNil, expectUnit, expectName, expectFun
-    , findEnvEntry, findTy, addType, addFun, addVar
+    , findEnvEntry, findTy, addType, addFun, addVar, addVars
     , err, erf
     ) where
 import qualified Parsing.Nodes as N
@@ -104,3 +104,6 @@ addFun (N.Id i) ps r = local (\(Env venv tenv) -> Env (insert venv i (FunEntry p
 
 addVar :: (SymbolTable t) => N.Id -> Ty -> Analyser t a -> Analyser t a
 addVar (N.Id i) t = local (\(Env venv tenv) -> Env (insert venv i (VarEntry t)) tenv)
+
+addVars :: (SymbolTable t) => [(N.Id, Ty)] -> Analyser t a -> Analyser t a
+addVars = undefined
