@@ -1,0 +1,5 @@
+let 
+    type rec = { x : int }
+    var a : rec := nil
+in
+end

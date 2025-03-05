@@ -1,0 +1,10 @@
+let
+    type animal = { name: string, age: int }
+    var tiger: animal := animal { age = 23, name = "robert" }
+    var name := animal { name = "h" }
+    var fakeAnimal := animal { name = "im", age = "not real" }
+    var evenFakerAnimal := animal { name = "bob", age = 2, hobbies = "coding" }
+in
+    print(tiger.name);
+    print(fakeAnimal.name)
+end

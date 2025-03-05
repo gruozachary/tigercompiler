@@ -182,3 +182,64 @@ main = hspec $ do
                 Right p -> pure p
                 Left e -> fail e
             runSemant p `shouldBe` []
+        
+        it "success chain assignment" $ do
+            file <- readFile "test/voidchaining.tiger"
+            p <- case parseString file of
+                Right p -> pure p
+                Left e -> fail e
+            runSemant p `shouldBe` []
+
+        it "success recursively defined type" $ do
+            file <- readFile "test/recursivetype.tiger"
+            p <- case parseString file of
+                Right p -> pure p
+                Left e -> fail e
+            runSemant p `shouldBe` []
+
+        it "success mutual recursively defined type" $ do
+            file <- readFile "test/mutualrectype.tiger"
+            p <- case parseString file of
+                Right p -> pure p
+                Left e -> fail e
+            runSemant p `shouldBe` []
+        
+        it "fail cyclic type declaration" $ do
+            file <- readFile "test/mutualrectype.tiger"
+            p <- case parseString file of
+                Right p -> pure p
+                Left e -> fail e
+            runSemant p `shouldBe` ["could not find type"]
+
+        it "success nested function" $ do
+            file <- readFile "test/nestedfunction.tiger"
+            p <- case parseString file of
+                Right p -> pure p
+                Left e -> fail e
+            runSemant p `shouldBe` []
+
+        it "success assign record to nil" $ do
+            file <- readFile "test/nilrecord.tiger"
+            p <- case parseString file of
+                Right p -> pure p
+                Left e -> fail e
+            runSemant p `shouldBe` []
+
+        it "success record assignment" $ do
+            file <- readFile "test/recordassignment.tiger"
+            p <- case parseString file of
+                Right p -> pure p
+                Left e -> fail e
+            runSemant p `shouldBe` []
+
+        it "fail record assignment" $ do
+            file <- readFile "test/badrecordassignment.tiger"
+            p <- case parseString file of
+                Right p -> pure p
+                Left e -> fail e
+            runSemant p `shouldBe` 
+                ["record fields invalid",
+                    "record fields invalid",
+                    "record fields invalid",
+                    "cannot get member from a non-record",
+                    "function arguments are not of expected type"]

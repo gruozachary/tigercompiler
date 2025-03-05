@@ -1,0 +1,14 @@
+let
+  function triple(s: string): string =
+    let
+      var buffer := ""
+      function append(s: string) = buffer := concat(buffer, s)
+    in
+      append(s);
+      append(s);
+      append(s);
+      buffer
+    end
+in
+  triple("abc")
+end
