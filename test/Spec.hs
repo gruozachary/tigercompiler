@@ -1,4 +1,4 @@
-import Test.Hspec (hspec, describe, it, shouldBe, shouldNotBe)
+import Test.Hspec (hspec, describe, it, shouldBe, shouldNotBe, shouldContain)
 import qualified Lexing.Lexer as Lx
 import Parsing.Parser
 import qualified Parsing.Nodes as Pn
@@ -250,3 +250,11 @@ main = hspec $ do
                 Right p -> pure p
                 Left e -> fail e
             runSemant p `shouldBe` ["cannot infer type of nil"]
+
+        it "fail use of local variables outside of function" $ do
+            file <- readFile "test/recursivefunction.tiger"
+            p <- case parseString file of
+                Right p -> pure p
+                Left e -> fail e
+            runSemant p `shouldContain` ["variable not found",
+                                        "variable not found"]
