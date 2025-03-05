@@ -1,0 +1,10 @@
+let
+    type x = int
+    type x = string
+    var y := 2
+    var x := 3
+    var y := "4"
+    function x(hello: int) = hello
+    function x(hello: string) = hello
+in
+end

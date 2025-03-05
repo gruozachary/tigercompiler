@@ -1,0 +1,10 @@
+let
+    type person = { name: string, age: int }
+    var lukas := person { name = "lukas", age = 19 }
+    var tom: person := person { name = "tom", age = 19 }
+in
+    print(lukas.name);
+    print_int(tom.age);
+    tom.age = 5;
+    lukas.name = tom.name
+end

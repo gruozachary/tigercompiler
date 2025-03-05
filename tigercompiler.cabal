@@ -28,6 +28,9 @@ library
       Lexing.Lexer
       Parsing.Nodes
       Parsing.Parser
+      Semantics.Analyser
+      Semantics.Semant
+      Semantics.SymbolTable
   other-modules:
       Paths_tigercompiler
   autogen-modules:
@@ -38,7 +41,9 @@ library
   build-depends:
       array
     , base >=4.7 && <5
+    , containers
     , hspec
+    , mtl
   default-language: Haskell2010
 
 executable tigercompiler-exe
@@ -53,7 +58,9 @@ executable tigercompiler-exe
   build-depends:
       array
     , base >=4.7 && <5
+    , containers
     , hspec
+    , mtl
     , tigercompiler
   default-language: Haskell2010
 
@@ -70,6 +77,8 @@ test-suite tigercompiler-test
   build-depends:
       array
     , base >=4.7 && <5
+    , containers
     , hspec
+    , mtl
     , tigercompiler
   default-language: Haskell2010
