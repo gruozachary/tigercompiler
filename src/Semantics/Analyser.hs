@@ -28,7 +28,6 @@ instance Eq Ty where
     TString == TString = True
     TRecord atts1 n1 == TRecord atts2 n2 = atts1 == atts2 && n1 == n2
     TArray t1 n1 == TArray t2 n2 = t1 == t2 && n1 == n2
-    TNil == TNil = True
     TUnit == TUnit = True
     TUnknown == TUnknown = True
     TName s1 mt1 == TName s2 mt2 = s1 == s2 && mt1 == mt2
