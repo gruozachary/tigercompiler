@@ -79,6 +79,7 @@ transExpr (N.OpEx e1 op e2) = do
     l <- transExpr e1
     r <- transExpr e2
     transOp op l r
+transExpr (N.Exs []) = return ((), TUnit)
 transExpr (N.Exs es) = traverse_ transExpr (init es) >> transExpr (last es)--  transExpr (last es) -- es will never be empty
 transExpr (N.AssignEx lv e) = do
     (_, lvT) <- transLValue lv
