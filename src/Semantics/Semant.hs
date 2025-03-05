@@ -54,8 +54,9 @@ transExpr (N.ArrayEx tid sizeExpr element) = do
             (_, sizeT) <- transExpr sizeExpr
             expectInt sizeT (erf "size of array is not an integer") $ do
                 (_, ets') <- transExpr element
-                matchTwo ets ets' (erf "array type does not match element initialiser") $
+                matchTwoElements ets ets' (erf "array type does not match element initialiser") $
                     return ((), t)
+
 transExpr (N.RecordEx tid ents) = do
     findTy tid (erf "type undefined") $ \t -> do
         expectRecord t (erf "type is not a record") $ \recordElem _ -> do

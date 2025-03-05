@@ -1,6 +1,6 @@
 module Semantics.Analyser
     ( Ty(..), EnvEntry(..), Exp, Expty, Data(..), Error, Analyser, Env(..)
-    , getNextId, matchTwo, expectInt, expectString, expectRecord, expectArray
+    , getNextId, matchTwo, matchTwoElements, expectInt, expectString, expectRecord, expectArray
     , expectNil, expectUnit, expectName, expectFun
     , findEnvEntry, findTy, notFindEnvEntry, notFindTy
     , addType, addFun, addVar, addVars
@@ -54,6 +54,12 @@ matchTwo :: (Eq a) => a -> a -> Analyser t b -> Analyser t b -> Analyser t b
 matchTwo t0 t1 fl su
     | t0 == t1  = su
     | otherwise = fl
+
+-- a special case of matchTwo on array elements
+-- Nil is a valid record type when filling an array of records
+matchTwoElements :: Ty -> Ty -> Analyser t b -> Analyser t b -> Analyser t b
+matchTwoElements (TRecord _ _) TNil _ su = su
+matchTwoElements t0 t1 fl su = matchTwo t0 t1 fl su
 
 expectInt :: Ty -> Analyser t a -> Analyser t a -> Analyser t a
 expectInt TInt _  su = su
