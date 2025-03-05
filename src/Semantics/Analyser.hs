@@ -2,7 +2,8 @@ module Semantics.Analyser
     ( Ty(..), EnvEntry(..), Exp, Expty, Data(..), Error, Analyser, Env(..)
     , getNextId, matchTwo, expectInt, expectString, expectRecord, expectArray
     , expectNil, expectUnit, expectName, expectFun
-    , findEnvEntry, findTy, addType, addFun, addVar, addVars
+    , findEnvEntry, findTy, notFindEnvEntry, notFindTy
+    , addType, addFun, addVar, addVars
     , err, erf
     ) where
 import qualified Parsing.Nodes as N
@@ -95,6 +96,22 @@ findTy :: (SymbolTable t) => N.TyId -> Analyser t a -> (Ty -> Analyser t a) -> A
 findTy (N.TyId i) fl su = do
     Env _ tenv <- ask
     maybe fl su (look tenv i)
+
+notFindEnvEntry :: (SymbolTable t) => N.Id -> Analyser t a -> Analyser t a -> Analyser t a
+notFindEnvEntry (N.Id i) isFound notFound = do
+    Env venv _ <- ask
+    let entry = look venv i
+    case entry of
+        Just _ -> isFound
+        Nothing -> notFound
+
+notFindTy :: (SymbolTable t) => N.TyId -> Analyser t a -> Analyser t a -> Analyser t a
+notFindTy (N.TyId i) isFound notFound = do
+    Env _ tenv <- ask
+    let entry = look tenv i
+    case entry of
+        Just _ -> isFound
+        Nothing -> notFound
 
 addType :: (SymbolTable t) => N.TyId -> Ty -> Analyser t a -> Analyser t a
 addType (N.TyId i) t = local (\(Env venv tenv) -> Env venv (insert tenv i t))
