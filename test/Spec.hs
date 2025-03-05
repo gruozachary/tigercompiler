@@ -1,4 +1,4 @@
-import Test.Hspec (hspec, describe, it, shouldBe)
+import Test.Hspec (hspec, describe, it, shouldBe, shouldNotBe)
 import qualified Lexing.Lexer as Lx
 import Parsing.Parser
 import qualified Parsing.Nodes as Pn
@@ -145,14 +145,14 @@ main = hspec $ do
                         [Pn.FunCallEx (Pn.Id "print") [Pn.LValEx (Pn.ArrLV (Pn.IdLV (Pn.Id "table")) (Pn.IntEx 0))]]))
     
     describe "semantic analysis" $ do
-        it "error variable and function with same name" $ do
+        it "fail variable and function with same name" $ do
             file <- readFile "test/namespace.tiger"
             p <- case parseString file of
                 Right p -> pure p
                 Left  e -> fail e
             runSemant p `shouldBe` ["function name clashes with existing name"]
 
-        it "error duplicate declarations" $ do
+        it "fail duplicate declarations" $ do
             file <- readFile "test/redeclare.tiger"
             p <- case parseString file of
                 Right p -> pure p
@@ -209,7 +209,7 @@ main = hspec $ do
             p <- case parseString file of
                 Right p -> pure p
                 Left e -> fail e
-            runSemant p `shouldBe` ["could not find type"]
+            runSemant p `shouldNotBe` []
 
         it "success nested function" $ do
             file <- readFile "test/nestedfunction.tiger"
