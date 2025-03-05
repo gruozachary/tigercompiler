@@ -146,9 +146,10 @@ transChunk (N.TypeChunk []) f = f
 transChunk (N.TypeChunk ((N.TypeDecl i t):ts)) f = do
     let tid = N.idToTyId i
     notFindTy tid (err "type name clashes with existing type" >> f) $ do
-        ty <- transTy t
-        addType tid ty $
-            transChunk (N.TypeChunk ts) f
+        addType tid TUnknown $ do
+            ty <- transTy t
+            addType tid ty $
+                transChunk (N.TypeChunk ts) f
 transChunk (N.FunChunk []) f = f
 transChunk (N.FunChunk ((N.Function fid (TyFields params) maybeRetT body) : fs)) f = do
     notFindEnvEntry fid (err "function name clashes with existing name" >> f) $ do

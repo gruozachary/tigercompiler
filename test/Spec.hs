@@ -205,7 +205,7 @@ main = hspec $ do
             runSemant p `shouldBe` []
         
         it "fail cyclic type declaration" $ do
-            file <- readFile "test/mutualrectype.tiger"
+            file <- readFile "test/cyclictypes.tiger"
             p <- case parseString file of
                 Right p -> pure p
                 Left e -> fail e
