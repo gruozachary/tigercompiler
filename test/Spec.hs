@@ -243,3 +243,10 @@ main = hspec $ do
                     "record fields invalid",
                     "cannot get member from a non-record",
                     "function arguments are not of expected type"]
+
+        it "fail infer type of nil" $ do
+            file <- readFile "test/assigntonil.tiger"
+            p <- case parseString file of
+                Right p -> pure p
+                Left e -> fail e
+            runSemant p `shouldBe` ["cannot infer type of nil"]
