@@ -189,7 +189,9 @@ transChunk (N.VarChunk (N.VarDecl i maybeT e)) f = do
                 findTy tyId (err "return type does not exist" >> f) $ \t' -> do
                     matchTwo t t' (err "inferred type does not match actual type" >> f) $
                         addVar i t f
-            Nothing -> addVar i t f
+            Nothing -> case t of
+                TNil -> err "cannot infer type of nil" >> f
+                _    -> addVar i t f
 
 
 transChunk (N.ImportChunk _) f = err "you should not be importing..." >> f
