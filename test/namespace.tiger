@@ -1,0 +1,6 @@
+let
+  type a = {a : int}
+  var  a := 0
+  function a (c: int) = c
+in
+end

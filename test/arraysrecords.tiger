@@ -1,0 +1,8 @@
+let
+  type rec = { val : int }
+  type rec_arr = array of rec
+  var  table := rec_arr[2] of rec { val = 42 }
+in
+  table[0].val := 51
+  /* Now table[1].val = 51. */
+end

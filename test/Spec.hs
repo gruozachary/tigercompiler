@@ -2,6 +2,7 @@ import Test.Hspec (hspec, describe, it, shouldBe)
 import qualified Lexing.Lexer as Lx
 import Parsing.Parser
 import qualified Parsing.Nodes as Pn
+import Semantics.Semant
 
 -- This function produces a list of tokens from the input, using alexMonadScan
 move :: Lx.Alex [Lx.Token]
@@ -24,7 +25,7 @@ parseString s = Lx.runAlex s parse
 
 main :: IO ()
 main = hspec $ do
-    describe "lexString" $ do
+    describe "lexical analysis" $ do
         it "lex nested comments" $ do
             lexString
                 "/* Comment /* Nested comment */ Comment */"
@@ -63,7 +64,7 @@ main = hspec $ do
                 , Lx.NumberLiteral 13323, Lx.Id "hello0", Lx.Id "hei0"
                 ]
 
-    describe "parse" $ do
+    describe "parsing" $ do
         it "parse basic expression" $ do
             parseString "hello = 59"
             `shouldBe`
@@ -142,3 +143,42 @@ main = hspec $ do
                         [Pn.TypeChunk [Pn.TypeDecl (Pn.Id "int_array") (Pn.ArrayTy (Pn.TyId "int"))],
                             Pn.VarChunk (Pn.VarDecl (Pn.Id "table") Nothing (Pn.ArrayEx (Pn.TyId "int_array") (Pn.IntEx 100) (Pn.IntEx 0)))] 
                         [Pn.FunCallEx (Pn.Id "print") [Pn.LValEx (Pn.ArrLV (Pn.IdLV (Pn.Id "table")) (Pn.IntEx 0))]]))
+    
+    describe "semantic analysis" $ do
+        it "error variable and function with same name" $ do
+            file <- readFile "test/namespace.tiger"
+            p <- case parseString file of
+                Right p -> pure p
+                Left  e -> fail e
+            runSemant p `shouldBe` ["function name clashes with existing name"]
+
+        it "error duplicate declarations" $ do
+            file <- readFile "test/redeclare.tiger"
+            p <- case parseString file of
+                Right p -> pure p
+                Left  e -> fail e
+            runSemant p `shouldBe` 
+                ["type name clashes with existing type",
+                    "variable name clashes with existing name",
+                    "function name clashes with existing name"]
+
+        it "success N-queens solution" $ do
+            file <- readFile "test/nqueens.tiger"
+            p <- case parseString file of
+                Right p -> pure p
+                Left  e -> fail e
+            runSemant p `shouldBe` []
+
+        it "success array of records" $ do
+            file <- readFile "test/arraysrecords.tiger"
+            p <- case parseString file of
+                Right p -> pure p
+                Left e -> fail e
+            runSemant p `shouldBe` []
+
+        it "success array of record loop initialization" $ do
+            file <- readFile "test/arrayinitialization.tiger"
+            p <- case parseString file of
+                Right p -> pure p
+                Left e -> fail e
+            runSemant p `shouldBe` []
