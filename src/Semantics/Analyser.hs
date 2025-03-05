@@ -1,6 +1,6 @@
 module Semantics.Analyser
     ( Ty(..), EnvEntry(..), Exp, Expty, Data(..), Error, Analyser, Env(..)
-    , getNextId, matchTwo, matchTwoElements, expectInt, expectString, expectRecord, expectArray
+    , getNextId, matchTwo, expectInt, expectString, expectRecord, expectArray
     , expectNil, expectUnit, expectName, expectFun
     , findEnvEntry, findTy, notFindEnvEntry, notFindTy
     , addType, addFun, addVar, addVars
@@ -19,7 +19,20 @@ data Ty
     | TUnit
     | TUnknown
     | TName String (Maybe Ty)
-    deriving (Ord, Eq)
+-- can't derive Eq because Nil type is a valid record
+
+instance Eq Ty where
+    TRecord _ _ == TNil = True
+    TNil == TRecord _ _ = True -- should this case even be possible?
+    TInt == TInt = True
+    TString == TString = True
+    TRecord atts1 n1 == TRecord atts2 n2 = atts1 == atts2 && n1 == n2
+    TArray t1 n1 == TArray t2 n2 = t1 == t2 && n1 == n2
+    TNil == TNil = True
+    TUnit == TUnit = True
+    TUnknown == TUnknown = True
+    TName s1 mt1 == TName s2 mt2 = s1 == s2 && mt1 == mt2
+    _ == _ = False
 
 -- data type for entries into the venv
 data EnvEntry
@@ -54,12 +67,6 @@ matchTwo :: (Eq a) => a -> a -> Analyser t b -> Analyser t b -> Analyser t b
 matchTwo t0 t1 fl su
     | t0 == t1  = su
     | otherwise = fl
-
--- a special case of matchTwo on array elements
--- Nil is a valid record type when filling an array of records
-matchTwoElements :: Ty -> Ty -> Analyser t b -> Analyser t b -> Analyser t b
-matchTwoElements (TRecord _ _) TNil _ su = su
-matchTwoElements t0 t1 fl su = matchTwo t0 t1 fl su
 
 expectInt :: Ty -> Analyser t a -> Analyser t a -> Analyser t a
 expectInt TInt _  su = su

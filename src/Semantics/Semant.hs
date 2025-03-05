@@ -7,7 +7,8 @@ import qualified Parsing.Nodes as N
 
 import Semantics.Analyser
 import Control.Monad (void)
-import Data.List (sort)
+import Data.List (sortBy)
+import Data.Ord (comparing)
 import Parsing.Nodes (TyFields(TyFields))
 import Control.Monad.RWS (runRWS)
 import Data.Foldable(traverse_)
@@ -54,15 +55,15 @@ transExpr (N.ArrayEx tid sizeExpr element) = do
             (_, sizeT) <- transExpr sizeExpr
             expectInt sizeT (erf "size of array is not an integer") $ do
                 (_, ets') <- transExpr element
-                matchTwoElements ets ets' (erf "array type does not match element initialiser") $
+                matchTwo ets ets' (erf "array type does not match element initialiser") $
                     return ((), t)
 
 transExpr (N.RecordEx tid ents) = do
     findTy tid (erf "type undefined") $ \t -> do
         expectRecord t (erf "type is not a record") $ \recordElem _ -> do
-            let stmap = sort recordElem
+            let stmap = sortBy (comparing fst) recordElem
             let (is, es) = unzip ents
-            es' <- sort . zip (map N.idToStr is) . map snd <$> traverse transExpr es
+            es' <- sortBy (comparing fst) . zip (map N.idToStr is) . map snd <$> traverse transExpr es
             matchTwo stmap es' (erf "record fields invalid") $
                 return ((), t)
 transExpr (N.LValEx lv) = transLValue lv
@@ -81,7 +82,7 @@ transExpr (N.OpEx e1 op e2) = do
     r <- transExpr e2
     transOp op l r
 transExpr (N.Exs []) = return ((), TUnit)
-transExpr (N.Exs es) = traverse_ transExpr (init es) >> transExpr (last es)--  transExpr (last es) -- es will never be empty
+transExpr (N.Exs es) = traverse_ transExpr (init es) >> transExpr (last es)
 transExpr (N.AssignEx lv e) = do
     (_, lvT) <- transLValue lv
     (_, eT)  <- transExpr e
@@ -143,9 +144,9 @@ transLValue (N.ArrLV lvalue e) = do
 transChunk :: (SymbolTable t) => N.Chunk -> Analyser t a -> Analyser t a
 transChunk (N.TypeChunk []) f = f
 transChunk (N.TypeChunk ((N.TypeDecl i t):ts)) f = do
-    ty <- transTy t
     let tid = N.idToTyId i
-    notFindTy tid (err "type name clashes with existing type" >> f) $
+    notFindTy tid (err "type name clashes with existing type" >> f) $ do
+        ty <- transTy t
         addType tid ty $
             transChunk (N.TypeChunk ts) f
 transChunk (N.FunChunk []) f = f
