@@ -104,20 +104,10 @@ findTy (N.TyId i) fl su = do
     maybe fl su (look tenv i)
 
 notFindEnvEntry :: (SymbolTable t) => N.Id -> Analyser t a -> Analyser t a -> Analyser t a
-notFindEnvEntry (N.Id i) isFound notFound = do
-    Env venv _ <- ask
-    let entry = look venv i
-    case entry of
-        Just _ -> isFound
-        Nothing -> notFound
+notFindEnvEntry i isFound notFound = findEnvEntry i notFound (const isFound)
 
 notFindTy :: (SymbolTable t) => N.TyId -> Analyser t a -> Analyser t a -> Analyser t a
-notFindTy (N.TyId i) isFound notFound = do
-    Env _ tenv <- ask
-    let entry = look tenv i
-    case entry of
-        Just _ -> isFound
-        Nothing -> notFound
+notFindTy i isFound notFound = findTy i notFound (const isFound)
 
 addType :: (SymbolTable t) => N.TyId -> Ty -> Analyser t a -> Analyser t a
 addType (N.TyId i) t = local (\(Env venv tenv) -> Env venv (insert tenv i t))
