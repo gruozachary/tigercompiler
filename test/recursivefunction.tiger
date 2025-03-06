@@ -1,0 +1,9 @@
+let
+    function f(x: int): int =
+        let var y: int := x + x
+        in if y < 10 then f(y) else y - 1 end
+in
+    print_int(x);
+    print_int(y);
+    f(1)
+end
