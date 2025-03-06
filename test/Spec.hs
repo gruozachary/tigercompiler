@@ -1,4 +1,4 @@
-import Test.Hspec (hspec, describe, it, shouldBe, shouldNotBe, shouldContain)
+import Test.Hspec (hspec, describe, it, shouldBe, shouldNotBe)
 import qualified Lexing.Lexer as Lx
 import Parsing.Parser
 import qualified Parsing.Nodes as Pn
@@ -256,4 +256,4 @@ main = hspec $ do
             p <- case parseString file of
                 Right p -> pure p
                 Left e -> fail e
-            runSemant p `shouldContain` ["variable not found"]
+            length (filter (== "variable not found") (runSemant p)) `shouldBe` 2
