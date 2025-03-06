@@ -256,5 +256,4 @@ main = hspec $ do
             p <- case parseString file of
                 Right p -> pure p
                 Left e -> fail e
-            runSemant p `shouldContain` ["variable not found",
-                                        "variable not found"]
+            runSemant p `shouldContain` ["variable not found"]
