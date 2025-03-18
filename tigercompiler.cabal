@@ -29,6 +29,7 @@ library
       Parsing.Nodes
       Parsing.Parser
       Semantics.Analyser
+      Semantics.Frame
       Semantics.Semant
       Semantics.SymbolTable
   other-modules:
