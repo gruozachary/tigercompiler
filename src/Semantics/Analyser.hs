@@ -4,7 +4,7 @@ module Semantics.Analyser
     , expectNil, expectUnit, expectName, expectFun
     , findEnvEntry, findTy, notFindEnvEntry, notFindTy
     , addType, addFun, addVar, addVars
-    , err, erf
+    , err, erf, nest, unnest
     ) where
 import qualified Parsing.Nodes as N
 import Semantics.SymbolTable
@@ -45,6 +45,7 @@ data Env t = Env (t EnvEntry) (t Ty)
 
 data Data = Data
     { nextId :: Int
+    , nestingLevel :: Int
     }
 
 type Error = String
@@ -126,3 +127,9 @@ addVar (N.Id i) t = local (\(Env venv tenv) -> Env (insert venv i (VarEntry t)) 
 
 addVars :: (SymbolTable t) => [(N.Id, Ty)] -> Analyser t a -> Analyser t a
 addVars = foldr (\(i, t) k -> k . addVar i t) id
+
+nest :: Analyser t ()
+nest = modify (\s -> s { nestingLevel = nestingLevel s + 1 })
+
+unnest :: Analyser t ()
+unnest = modify (\s -> s { nestingLevel = nestingLevel s - 1 })

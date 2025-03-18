@@ -166,7 +166,7 @@ transChunk (N.FunChunk ((N.Function fid (TyFields params) maybeRetT body) : fs))
             Nothing -> 
                 addFun fid paramTys TUnknown $ do
                     (_, retT') <- addVars paramsWithTys $
-                        transExpr body
+                        nest *> transExpr body <* unnest
                     addFun fid paramTys retT' $
                             transChunk (N.FunChunk fs) f
 
